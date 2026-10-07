@@ -166,12 +166,17 @@ export default function TeacherExamGrading({
                                                                 </div>
                                                             </div>
                                                             <div className="mb-2 max-h-40 overflow-y-auto rounded-md bg-muted p-3 text-sm whitespace-pre-wrap">
-                                                                {essay.student_text || (
-                                                                    <span className="text-muted-foreground italic">
-                                                                        (tidak
-                                                                        menjawab)
-                                                                    </span>
-                                                                )}
+                                                                <span
+                                                                    dir="auto"
+                                                                    className="font-content"
+                                                                >
+                                                                    {essay.student_text || (
+                                                                        <span className="text-muted-foreground italic">
+                                                                            (tidak
+                                                                            menjawab)
+                                                                        </span>
+                                                                    )}
+                                                                </span>
                                                             </div>
                                                             <div className="flex items-center gap-2">
                                                                 <Label

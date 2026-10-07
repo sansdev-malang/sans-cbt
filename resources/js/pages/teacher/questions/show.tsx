@@ -1,18 +1,18 @@
-import { Form, Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
-import TeacherQuestionController from '@/actions/App/Http/Controllers/Teacher/QuestionController';
-import { DeleteConfirmationDialog } from '@/components/admin/delete-confirmation-dialog';
+import { Form, Head, Link, router } from "@inertiajs/react";
+import { useState } from "react";
+import TeacherQuestionController from "@/actions/App/Http/Controllers/Teacher/QuestionController";
+import { DeleteConfirmationDialog } from "@/components/admin/delete-confirmation-dialog";
 import QuestionFormFields, {
     QUESTION_TYPE_LABELS,
-} from '@/components/admin/question-form-fields';
-import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { dashboard as teacherDashboard } from '@/routes/teacher';
-import { index as questionsIndex } from '@/routes/teacher/questions';
+} from "@/components/admin/question-form-fields";
+import Heading from "@/components/heading";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { dashboard as teacherDashboard } from "@/routes/teacher";
+import { index as questionsIndex } from "@/routes/teacher/questions";
 
-type QuestionType = 'multiple_choice' | 'true_false' | 'essay';
+type QuestionType = "multiple_choice" | "true_false" | "essay";
 type Option = {
     id: number;
     label: string;
@@ -88,6 +88,7 @@ export default function TeacherQuestionShow({
                                         question={question}
                                         errors={errors}
                                         idPrefix="edit"
+                                        paletteStickyClass="top-16"
                                     />
                                     <div className="flex flex-wrap gap-2">
                                         <Button disabled={processing}>
@@ -133,8 +134,8 @@ export default function TeacherQuestionShow({
 
 TeacherQuestionShow.layout = {
     breadcrumbs: [
-        { title: 'Dashboard Guru', href: teacherDashboard() },
-        { title: 'Bank Soal', href: questionsIndex() },
-        { title: 'Edit Soal', href: window.location.href },
+        { title: "Dashboard Guru", href: teacherDashboard() },
+        { title: "Bank Soal", href: questionsIndex() },
+        { title: "Edit Soal", href: window.location.href },
     ],
 };

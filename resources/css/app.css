@@ -107,6 +107,8 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.87 0 0);
+    --scrollbar-thumb: oklch(0.145 0 0 / 20%);
+    --scrollbar-thumb-hover: oklch(0.145 0 0 / 35%);
 }
 
 .dark {
@@ -142,14 +144,78 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(0.269 0 0);
     --sidebar-ring: oklch(0.439 0 0);
+    --scrollbar-thumb: oklch(0.985 0 0 / 20%);
+    --scrollbar-thumb-hover: oklch(0.985 0 0 / 35%);
 }
 
 @layer base {
+    html,
     * {
         @apply border-border;
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar-thumb) transparent;
+    }
+
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background-color: var(--scrollbar-thumb);
+        border-radius: 9999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background-color: var(--scrollbar-thumb-hover);
+    }
+
+    ::-webkit-scrollbar-corner {
+        background: transparent;
     }
 
     body {
         @apply bg-background text-foreground;
     }
+}
+
+/*
+ * Dukungan aksara khusus untuk materi CBT:
+ * - Aksara Jawa (Hanacaraka): webfont Noto Sans Javanese — perangkat tanpa
+ *   font lokal (mis. Windows tanpa Javanese Text) tetap bisa menampilkan.
+ * - Arab + harakat: Noto Naskh Arabic agar tampil konsisten dan rapi di
+ *   semua perangkat, bukan bergantung font bawaan.
+ * File font disajikan dari /public/fonts sehingga bisa dipakai semua klien.
+ */
+@font-face {
+    font-family: 'Noto Sans Javanese';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/noto-sans-javanese-400.woff2') format('woff2');
+    unicode-range: U+A980-U+A9DF, U+A9E0-U+A9FF, U+200C-200D, U+25CC;
+}
+
+@font-face {
+    font-family: 'Noto Naskh Arabic';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/noto-naskh-arabic-400.woff2') format('woff2');
+    unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF, U+FE70-FEFF, U+200C-200D, U+25CC;
+}
+
+/*
+ * Tumpukan font konten ujian: font aplikasi dulu, lalu font aksara khusus
+ * sebagai fallback otomatis per karakter (browser memilih glyph yang ada).
+ */
+.font-content {
+    font-family: 'Instrument Sans', 'Noto Naskh Arabic', 'Noto Sans Javanese',
+        'Traditional Arabic', 'Javanese Text', ui-sans-serif, system-ui,
+        sans-serif;
+    line-height: 1.9; /* beri ruang harakat & taling untuk aksara Jawa/Arab */
 }

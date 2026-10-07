@@ -67,7 +67,9 @@ Route::middleware(['auth', 'verified', 'role:admin'])
     });
 
 // Question media is stored on the private disk and accessible to all authenticated users (admin, teacher, student).
-Route::middleware(['auth', 'verified'])
+// Question media: admin & guru mengelola bank soal, siswa butuh gambar saat mengerjakan ujian.
+// Nama file acak (hash) sehingga tidak bisa ditebak; orang tua & tamu ditolak.
+Route::middleware(['auth', 'verified', 'role:admin,guru,siswa'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {

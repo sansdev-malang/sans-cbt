@@ -122,6 +122,11 @@ export default function StudentExamWork({
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [focusMode, setFocusMode] = useState(false);
     const [locked, setLocked] = useState(session.locked);
+    // Preferensi ukuran font siswa: 0.8–1.8× (tersimpan lintas soal & sesi).
+    const [fontScale, setFontScale] = useState(() => {
+        const stored = Number(localStorage.getItem("cbt-font-scale"));
+        return stored >= 0.8 && stored <= 1.8 ? stored : 1;
+    });
     const submittedRef = useRef(false);
     const saveTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>(
         {},
@@ -348,6 +353,20 @@ export default function StudentExamWork({
         });
     };
 
+    const changeFontScale = (delta: number) => {
+        setFontScale((current) => {
+            const next = Math.min(
+                1.8,
+                Math.max(0.8, Math.round((current + delta) * 10) / 10),
+            );
+            localStorage.setItem("cbt-font-scale", String(next));
+            return next;
+        });
+    };
+
+    // Ukuran font konten membaca mengikuti preferensi siswa.
+    const fs = (baseRem: number) => `${+(baseRem * fontScale).toFixed(3)}rem`;
+
     const question = questions[current];
     const answeredCount = questions.filter(
         (q) =>
@@ -456,12 +475,18 @@ export default function StudentExamWork({
                 {/* Tengah: progress modern */}
                 <div className="hidden md:flex items-center gap-3">
                     <div className="flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-xs">
-                        <span className="text-muted-foreground font-medium">Progres:</span>
+                        <span className="text-muted-foreground font-medium">
+                            Progres:
+                        </span>
                         <span className="font-semibold text-foreground">
                             {answeredCount}/{questions.length}
                         </span>
                         <span className="text-muted-foreground font-medium">
-                            ({Math.round((answeredCount / questions.length) * 100)}%)
+                            (
+                            {Math.round(
+                                (answeredCount / questions.length) * 100,
+                            )}
+                            %)
                         </span>
                         <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
                             <div
@@ -498,6 +523,35 @@ export default function StudentExamWork({
                             className={`size-3.5 shrink-0 ${lowTime ? "animate-pulse" : ""}`}
                         />
                         {formatClock(remaining)}
+                    </div>
+                    {/* Pengatur ukuran font stimulus & soal */}
+                    <div className="flex items-center gap-0.5 rounded-lg border bg-background p-0.5">
+                        <button
+                            type="button"
+                            onClick={() => changeFontScale(-0.1)}
+                            disabled={fontScale <= 0.8}
+                            title="Perkecil huruf"
+                            aria-label="Perkecil huruf"
+                            className="flex size-7 items-center justify-center rounded-md text-xs font-bold transition-colors hover:bg-muted disabled:opacity-40"
+                        >
+                            A−
+                        </button>
+                        <span
+                            aria-live="polite"
+                            className="w-9 text-center text-[10px] font-semibold tabular-nums text-muted-foreground"
+                        >
+                            {Math.round(fontScale * 100)}%
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => changeFontScale(0.1)}
+                            disabled={fontScale >= 1.8}
+                            title="Perbesar huruf"
+                            aria-label="Perbesar huruf"
+                            className="flex size-7 items-center justify-center rounded-md text-sm font-bold transition-colors hover:bg-muted disabled:opacity-40"
+                        >
+                            A+
+                        </button>
                     </div>
                     {focusMode && (
                         <div className="hidden sm:flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-2 py-1 text-xs text-emerald-700 dark:text-emerald-400 font-medium">
@@ -546,7 +600,11 @@ export default function StudentExamWork({
                                                 Bahan Bacaan
                                             </span>
                                         </div>
-                                        <CardContent className="flex-1 p-5 text-sm md:text-base leading-relaxed whitespace-pre-wrap max-h-[60vh] lg:max-h-[calc(100vh-270px)] overflow-y-auto">
+                                        <CardContent
+                                            dir="auto"
+                                            className="font-content flex-1 p-5 leading-relaxed whitespace-pre-wrap max-h-[60vh] lg:max-h-[calc(100vh-270px)] overflow-y-auto"
+                                            style={{ fontSize: fs(1) }}
+                                        >
                                             {question.stimulus}
                                         </CardContent>
                                     </Card>
@@ -590,7 +648,11 @@ export default function StudentExamWork({
                                         </Button>
                                     </div>
                                     <CardContent className="flex-1 space-y-5 p-5 max-h-[60vh] lg:max-h-[calc(100vh-270px)] overflow-y-auto">
-                                        <p className="text-base font-medium leading-relaxed whitespace-pre-wrap text-foreground">
+                                        <p
+                                            dir="auto"
+                                            style={{ fontSize: fs(1) }}
+                                            className="font-content font-medium leading-relaxed whitespace-pre-wrap text-foreground"
+                                        >
                                             {question.content}
                                         </p>
 
@@ -609,6 +671,7 @@ export default function StudentExamWork({
                                         <QuestionInput
                                             question={question}
                                             value={answers[question.id] ?? null}
+                                            fs={fs}
                                             onChange={(value) =>
                                                 setAnswer(question.id, value)
                                             }
@@ -634,7 +697,8 @@ export default function StudentExamWork({
                             </Button>
 
                             <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground font-medium px-3 py-1.5 rounded-full bg-muted/40 border">
-                                Soal <strong>{current + 1}</strong> dari <strong>{questions.length}</strong>
+                                Soal <strong>{current + 1}</strong> dari{" "}
+                                <strong>{questions.length}</strong>
                             </div>
 
                             {current < questions.length - 1 ? (
@@ -684,9 +748,15 @@ export default function StudentExamWork({
                         {/* Modern Progress Card in Sidebar */}
                         <div className="rounded-xl border bg-muted/20 p-3.5 space-y-2.5">
                             <div className="flex items-center justify-between text-xs">
-                                <span className="font-medium text-muted-foreground">Kemajuan Pengerjaan</span>
+                                <span className="font-medium text-muted-foreground">
+                                    Kemajuan Pengerjaan
+                                </span>
                                 <span className="font-bold text-foreground">
-                                    {Math.round((answeredCount / questions.length) * 100)}%
+                                    {Math.round(
+                                        (answeredCount / questions.length) *
+                                            100,
+                                    )}
+                                    %
                                 </span>
                             </div>
                             <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
@@ -702,19 +772,25 @@ export default function StudentExamWork({
                                     <span className="block font-bold text-emerald-600 dark:text-emerald-400">
                                         {answeredCount}
                                     </span>
-                                    <span className="text-muted-foreground text-[10px]">Dijawab</span>
+                                    <span className="text-muted-foreground text-[10px]">
+                                        Dijawab
+                                    </span>
                                 </div>
                                 <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 py-1 px-1">
                                     <span className="block font-bold text-amber-600 dark:text-amber-400">
                                         {flagged.size}
                                     </span>
-                                    <span className="text-muted-foreground text-[10px]">Ragu</span>
+                                    <span className="text-muted-foreground text-[10px]">
+                                        Ragu
+                                    </span>
                                 </div>
                                 <div className="rounded-lg bg-muted/60 border border-border/40 py-1 px-1">
                                     <span className="block font-bold text-muted-foreground">
                                         {unansweredCount}
                                     </span>
-                                    <span className="text-muted-foreground text-[10px]">Kosong</span>
+                                    <span className="text-muted-foreground text-[10px]">
+                                        Kosong
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -804,7 +880,8 @@ export default function StudentExamWork({
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
                     <span className="font-medium">Navigasi Soal</span>
                     <span className="font-semibold text-foreground">
-                        {answeredCount}/{questions.length} Selesai ({Math.round((answeredCount / questions.length) * 100)}%)
+                        {answeredCount}/{questions.length} Selesai (
+                        {Math.round((answeredCount / questions.length) * 100)}%)
                     </span>
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
@@ -913,10 +990,12 @@ function MatchingInput({
     question,
     value,
     onChange,
+    fs,
 }: {
     question: WorkQuestion;
     value: AnswerValue | null;
     onChange: (value: AnswerValue | null) => void;
+    fs: (baseRem: number) => string;
 }) {
     const matches =
         (value?.matches as Record<string, string> | undefined) ?? {};
@@ -1027,7 +1106,11 @@ function MatchingInput({
                                                 className="max-h-10 rounded border object-contain"
                                             />
                                         )}
-                                        <span className="font-medium leading-snug">
+                                        <span
+                                            dir="auto"
+                                            style={{ fontSize: fs(0.875) }}
+                                            className="font-content font-medium leading-snug"
+                                        >
                                             {pair.left_text}
                                         </span>
                                     </div>
@@ -1105,7 +1188,9 @@ function MatchingInput({
                                         />
                                     )}
                                     <span
-                                        className={`font-medium leading-snug ${!isActive && !isUsed ? "opacity-50" : ""}`}
+                                        dir="auto"
+                                        style={{ fontSize: fs(0.875) }}
+                                        className={`font-content font-medium leading-snug ${!isActive && !isUsed ? "opacity-50" : ""}`}
                                     >
                                         {poolItem.text}
                                     </span>
@@ -1141,10 +1226,12 @@ function QuestionInput({
     question,
     value,
     onChange,
+    fs,
 }: {
     question: WorkQuestion;
     value: AnswerValue | null;
     onChange: (value: AnswerValue | null) => void;
+    fs: (baseRem: number) => string;
 }) {
     if (question.type === "multiple_choice" || question.type === "true_false") {
         const selected = (value?.option_id as number | undefined) ?? null;
@@ -1170,7 +1257,13 @@ function QuestionInput({
                             <span className="font-semibold mr-1">
                                 {String.fromCharCode(65 + index)}.
                             </span>
-                            {option.content}
+                            <span
+                                dir="auto"
+                                style={{ fontSize: fs(0.875) }}
+                                className="font-content"
+                            >
+                                {option.content}
+                            </span>
                         </span>
                         {option.image_url && (
                             <img
@@ -1218,7 +1311,13 @@ function QuestionInput({
                             <span className="font-semibold mr-1">
                                 {String.fromCharCode(65 + index)}.
                             </span>
-                            {option.content}
+                            <span
+                                dir="auto"
+                                style={{ fontSize: fs(0.875) }}
+                                className="font-content"
+                            >
+                                {option.content}
+                            </span>
                         </span>
                         {option.image_url && (
                             <img
@@ -1248,7 +1347,13 @@ function QuestionInput({
                                 <span className="font-semibold mr-1">
                                     {index + 1}.
                                 </span>
-                                {option.content}
+                                <span
+                                    dir="auto"
+                                    style={{ fontSize: fs(0.875) }}
+                                    className="font-content"
+                                >
+                                    {option.content}
+                                </span>
                             </p>
                             {option.image_url && (
                                 <img
@@ -1304,6 +1409,7 @@ function QuestionInput({
                 question={question}
                 value={value}
                 onChange={onChange}
+                fs={fs}
             />
         );
     }
@@ -1311,11 +1417,13 @@ function QuestionInput({
     const text = (value?.text as string | undefined) ?? "";
     return (
         <textarea
+            dir="auto"
             rows={8}
             value={text}
             onChange={(event) => onChange({ text: event.target.value })}
             placeholder="Tulis jawabanmu di sini…"
-            className="w-full rounded-lg border border-input bg-background p-4 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            style={{ fontSize: fs(0.875) }}
+            className="font-content w-full rounded-lg border border-input bg-background p-4 leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary resize-none"
         />
     );
 }

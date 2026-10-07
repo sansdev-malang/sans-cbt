@@ -1,18 +1,18 @@
-import { Form, Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
-import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
-import { DeleteConfirmationDialog } from '@/components/admin/delete-confirmation-dialog';
+import { Form, Head, Link, router } from "@inertiajs/react";
+import { useState } from "react";
+import QuestionController from "@/actions/App/Http/Controllers/Admin/QuestionController";
+import { DeleteConfirmationDialog } from "@/components/admin/delete-confirmation-dialog";
 import QuestionFormFields, {
     QUESTION_TYPE_LABELS,
-} from '@/components/admin/question-form-fields';
-import Heading from '@/components/heading';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { dashboard } from '@/routes/admin';
-import { index as questionsIndex } from '@/routes/admin/questions';
+} from "@/components/admin/question-form-fields";
+import Heading from "@/components/heading";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { dashboard } from "@/routes/admin";
+import { index as questionsIndex } from "@/routes/admin/questions";
 
-type QuestionType = 'multiple_choice' | 'true_false' | 'essay';
+type QuestionType = "multiple_choice" | "true_false" | "essay";
 type Option = {
     id: number;
     label: string;
@@ -82,6 +82,7 @@ export default function QuestionShow({ question }: { question: Question }) {
                                         question={question}
                                         errors={errors}
                                         idPrefix="edit"
+                                        paletteStickyClass="top-16"
                                     />
                                     <div className="flex flex-wrap gap-2">
                                         <Button disabled={processing}>
@@ -127,8 +128,8 @@ export default function QuestionShow({ question }: { question: Question }) {
 
 QuestionShow.layout = {
     breadcrumbs: [
-        { title: 'Dashboard Admin', href: dashboard() },
-        { title: 'Bank Soal', href: questionsIndex() },
-        { title: 'Edit Soal', href: window.location.href },
+        { title: "Dashboard Admin", href: dashboard() },
+        { title: "Bank Soal", href: questionsIndex() },
+        { title: "Edit Soal", href: window.location.href },
     ],
 };

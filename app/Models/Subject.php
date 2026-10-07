@@ -34,4 +34,20 @@ class Subject extends Model
             'is_active' => 'boolean',
         ];
     }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Exam, $this>
+     */
+    public function exams(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Exam::class);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<QuestionBank, $this>
+     */
+    public function questionBanks(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(QuestionBank::class);
+    }
 }

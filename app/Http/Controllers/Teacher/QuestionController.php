@@ -77,10 +77,14 @@ class QuestionController extends Controller
         $this->authorizeBank($request, $questionBank);
 
         $questionBank->loadCount('questions')
-            ->load(['subject:id,name', 'schoolClass:id,name', 'questions:id,question_bank_id,content,stimulus,type,difficulty,weight']);
+            ->load([
+                'subject:id,name',
+                'schoolClass:id,name',
+                'questions' => fn ($query) => $query->select('id', 'question_bank_id', 'content', 'stimulus', 'type', 'difficulty', 'weight', 'image_path')->with(['options', 'pairs']),
+            ]);
 
         return Inertia::render('teacher/questions/bank', [
-            'bank' => $this->bankPayload($questionBank),
+            'bank' => $this->bankPayload($questionBank, detailed: true),
             'subjects' => Subject::query()->where('is_active', true)->orderBy('name')->get(['id', 'name'])->map(fn (Subject $subject): array => ['value' => $subject->id, 'label' => $subject->name])->all(),
             'classes' => SchoolClass::query()->orderBy('name')->get(['id', 'name'])->map(fn (SchoolClass $class): array => ['value' => $class->id, 'label' => $class->name])->all(),
         ]);
@@ -192,7 +196,7 @@ class QuestionController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function bankPayload(QuestionBank $bank): array
+    private function bankPayload(QuestionBank $bank, bool $detailed = false): array
     {
         return [
             'id' => $bank->id,
@@ -203,14 +207,40 @@ class QuestionController extends Controller
             'class' => $bank->schoolClass?->name,
             'material' => $bank->material,
             'questions_count' => $bank->questions_count,
-            'questions' => $bank->questions->map(fn (Question $question): array => [
-                'id' => $question->id,
-                'content' => $question->content,
-                'stimulus' => $question->stimulus,
-                'type' => $question->type,
-                'difficulty' => $question->difficulty,
-                'weight' => $question->weight,
-            ])->all(),
+            'questions' => $bank->questions->map(function (Question $question) use ($detailed): array {
+                $payload = [
+                    'id' => $question->id,
+                    'content' => $question->content,
+                    'stimulus' => $question->stimulus,
+                    'type' => $question->type,
+                    'difficulty' => $question->difficulty,
+                    'weight' => $question->weight,
+                ];
+
+                if ($detailed) {
+                    $payload['image_path'] = $question->image_path;
+                    $payload['image_url'] = $question->image_url;
+                    $payload['options'] = $question->options->map(fn ($option): array => [
+                        'id' => $option->id,
+                        'label' => $option->label,
+                        'content' => $option->content,
+                        'is_correct' => $option->is_correct,
+                        'image_path' => $option->image_path,
+                        'image_url' => $option->image_url,
+                    ])->all();
+                    $payload['pairs'] = $question->pairs->map(fn ($pair): array => [
+                        'id' => $pair->id,
+                        'left_text' => $pair->left_text,
+                        'right_text' => $pair->right_text,
+                        'left_image_path' => $pair->left_image_path,
+                        'left_image_url' => $pair->left_image_url,
+                        'right_image_path' => $pair->right_image_path,
+                        'right_image_url' => $pair->right_image_url,
+                    ])->all();
+                }
+
+                return $payload;
+            })->all(),
         ];
     }
 }

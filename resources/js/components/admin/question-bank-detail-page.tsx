@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Link, router } from "@inertiajs/react";
 import {
     ArrowLeft,
     Ellipsis,
@@ -7,34 +7,36 @@ import {
     Plus,
     Search,
     Trash2,
-} from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { DeleteConfirmationDialog } from '@/components/admin/delete-confirmation-dialog';
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { DeleteConfirmationDialog } from "@/components/admin/delete-confirmation-dialog";
 import {
     AddQuestionDialog,
     BankDialog,
-} from '@/components/admin/question-bank-dialogs';
+    QuestionEditDialog,
+} from "@/components/admin/question-bank-dialogs";
 import {
     DIFFICULTY_VARIANT,
     SHORT_TYPE_LABELS,
     type BankOption,
+    type BankQuestion,
     type QuestionBank,
     type QuestionBankControllerApi,
-} from '@/components/admin/question-bank-types';
-import { QUESTION_TYPE_LABELS } from '@/components/admin/question-form-fields';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+} from "@/components/admin/question-bank-types";
+import { QUESTION_TYPE_LABELS } from "@/components/admin/question-form-fields";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 
 export type QuestionBankDetailPageProps = {
-    variant: 'admin' | 'teacher';
+    variant: "admin" | "teacher";
     controller: QuestionBankControllerApi;
     bank: QuestionBank;
     indexUrl: string;
@@ -56,18 +58,20 @@ export default function QuestionBankDetailPage({
     classes,
     teachers = [],
 }: QuestionBankDetailPageProps) {
-    const isAdmin = variant === 'admin';
+    const isAdmin = variant === "admin";
     const [addOpen, setAddOpen] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
+    const [editQuestion, setEditQuestion] = useState<BankQuestion | null>(null);
     const [deleteOpen, setDeleteOpen] = useState(false);
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = useState("");
 
     const questions = useMemo(() => {
         const needle = search.trim().toLowerCase();
         if (!needle) return bank.questions;
-        return bank.questions.filter((question) =>
-            question.content.toLowerCase().includes(needle) ||
-            Boolean(question.stimulus?.toLowerCase().includes(needle)),
+        return bank.questions.filter(
+            (question) =>
+                question.content.toLowerCase().includes(needle) ||
+                Boolean(question.stimulus?.toLowerCase().includes(needle)),
         );
     }, [bank, search]);
 
@@ -79,7 +83,7 @@ export default function QuestionBankDetailPage({
 
     const metaParts = [
         bank.subject,
-        bank.class ?? 'Semua kelas',
+        bank.class ?? "Semua kelas",
         ...(isAdmin && bank.teacher ? [bank.teacher] : []),
         ...(bank.material ? [bank.material] : []),
     ];
@@ -96,7 +100,7 @@ export default function QuestionBankDetailPage({
                             {bank.name}
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                            {metaParts.join(' · ')}
+                            {metaParts.join(" · ")}
                         </p>
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                             <Badge variant="secondary">
@@ -177,7 +181,7 @@ export default function QuestionBankDetailPage({
                                 />
                             </div>
                             <p className="text-sm text-muted-foreground">
-                                {questions.length} dari {bank.questions_count}{' '}
+                                {questions.length} dari {bank.questions_count}{" "}
                                 soal
                             </p>
                         </div>
@@ -239,14 +243,18 @@ export default function QuestionBankDetailPage({
                                                         </span>
                                                     </div>
                                                 )}
-                                                <Link
-                                                    href={controller.show.url(
-                                                        question.id,
-                                                    )}
-                                                    className="line-clamp-2 hover:underline"
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setEditQuestion(
+                                                            question,
+                                                        )
+                                                    }
+                                                    dir="auto"
+                                                    className="font-content line-clamp-2 text-left hover:underline"
                                                 >
                                                     {question.content}
-                                                </Link>
+                                                </button>
                                             </td>
                                             <td className="px-4 py-3.5 whitespace-nowrap">
                                                 <Badge
@@ -265,7 +273,7 @@ export default function QuestionBankDetailPage({
                                                             DIFFICULTY_VARIANT[
                                                                 question
                                                                     .difficulty
-                                                            ] ?? 'secondary'
+                                                            ] ?? "secondary"
                                                         }
                                                         className="font-normal"
                                                     >
@@ -282,17 +290,15 @@ export default function QuestionBankDetailPage({
                                             </td>
                                             <td className="px-6 py-3.5 text-right whitespace-nowrap">
                                                 <Button
-                                                    asChild
                                                     size="sm"
                                                     variant="ghost"
+                                                    onClick={() =>
+                                                        setEditQuestion(
+                                                            question,
+                                                        )
+                                                    }
                                                 >
-                                                    <Link
-                                                        href={controller.show.url(
-                                                            question.id,
-                                                        )}
-                                                    >
-                                                        Edit
-                                                    </Link>
+                                                    Edit
                                                 </Button>
                                             </td>
                                         </tr>
@@ -309,12 +315,12 @@ export default function QuestionBankDetailPage({
                                                 <p className="mt-1 text-sm text-muted-foreground">
                                                     Coba kata kunci lain.
                                                 </p>
-                                                {search.trim() !== '' && (
+                                                {search.trim() !== "" && (
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
                                                         onClick={() =>
-                                                            setSearch('')
+                                                            setSearch("")
                                                         }
                                                         className="mt-3"
                                                     >
@@ -357,6 +363,14 @@ export default function QuestionBankDetailPage({
                     subjects={subjects}
                     classes={classes}
                     teachers={teachers}
+                />
+            )}
+            {editQuestion && (
+                <QuestionEditDialog
+                    question={editQuestion}
+                    bank={bank}
+                    controller={controller}
+                    onOpenChange={(open) => !open && setEditQuestion(null)}
                 />
             )}
 

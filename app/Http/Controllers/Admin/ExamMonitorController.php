@@ -18,6 +18,8 @@ class ExamMonitorController extends Controller
     {
         $ongoing = ExamSession::query()
             ->where('status', 'ongoing')
+            ->whereHas('student')
+            ->whereHas('exam')
             ->with(['exam:id,name,subject_id,duration_minutes', 'exam.subject:id,name', 'student:id,full_name', 'answers'])
             ->orderBy('started_at')
             ->get()
@@ -28,9 +30,9 @@ class ExamMonitorController extends Controller
 
                 return [
                     'id' => $session->id,
-                    'exam_name' => $session->exam->name,
-                    'subject' => $session->exam->subject->name,
-                    'student_name' => $session->student->full_name,
+                    'exam_name' => $session->exam?->name ?? '(ujian terhapus)',
+                    'subject' => $session->exam?->subject?->name ?? '—',
+                    'student_name' => $session->student?->full_name ?? '(siswa terhapus)',
                     'answered_count' => $session->answers->count(),
                     'started_at_label' => $session->started_at->translatedFormat('d M Y H:i'),
                     'remaining_minutes' => max(0, (int) ceil(now()->diffInMinutes($session->deadline(), false))),

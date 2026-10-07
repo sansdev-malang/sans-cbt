@@ -1,21 +1,22 @@
-import { Form } from '@inertiajs/react';
-import InputError from '@/components/input-error';
-import QuestionFormFields from '@/components/admin/question-form-fields';
+import { Form } from "@inertiajs/react";
+import InputError from "@/components/input-error";
+import QuestionFormFields from "@/components/admin/question-form-fields";
 import {
     type BankOption,
+    type BankQuestion,
     type QuestionBank,
     type QuestionBankControllerApi,
-} from '@/components/admin/question-bank-types';
-import { Button } from '@/components/ui/button';
+} from "@/components/admin/question-bank-types";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
     DialogDescription,
     DialogHeader,
     DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 /** Create/edit dialog for a question bank itself. */
 export function BankDialog({
@@ -42,7 +43,7 @@ export function BankDialog({
             <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle>
-                        {bank ? 'Edit Bank Soal' : 'Buat Bank Soal'}
+                        {bank ? "Edit Bank Soal" : "Buat Bank Soal"}
                     </DialogTitle>
                     <DialogDescription>
                         Bank soal mengelompokkan soal berdasarkan mata
@@ -100,7 +101,7 @@ export function BankDialog({
                                 name="material"
                                 label="Materi (opsional)"
                                 placeholder="cth: Sistem Persamaan Linear Dua Variabel"
-                                defaultValue={bank?.material ?? ''}
+                                defaultValue={bank?.material ?? ""}
                                 error={errors.material}
                             />
                             <div className="flex justify-end gap-2">
@@ -112,7 +113,7 @@ export function BankDialog({
                                     Batal
                                 </Button>
                                 <Button disabled={processing}>
-                                    {bank ? 'Simpan Perubahan' : 'Simpan Bank'}
+                                    {bank ? "Simpan Perubahan" : "Simpan Bank"}
                                 </Button>
                             </div>
                         </>
@@ -144,6 +145,7 @@ export function AddQuestionDialog({
                     </DialogDescription>
                 </DialogHeader>
                 <Form
+                    key={`add-${bank.id}`}
                     {...controller.store.form()}
                     options={{ preserveScroll: true }}
                     onSuccess={() => onOpenChange(false)}
@@ -185,7 +187,7 @@ function Field({
     label,
     required = false,
     placeholder,
-    defaultValue = '',
+    defaultValue = "",
     error,
     hint,
 }: {
@@ -237,7 +239,7 @@ function SelectField({
                 id={name}
                 name={name}
                 required={required}
-                defaultValue={defaultValue ?? ''}
+                defaultValue={defaultValue ?? ""}
                 className="h-9 rounded-md border border-input bg-background px-2 text-sm"
             >
                 <option value="">-</option>
@@ -250,5 +252,75 @@ function SelectField({
             {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
             <InputError message={error} />
         </div>
+    );
+}
+
+/**
+ * Edit-question modal on the bank detail page: edits any question type
+ * without navigating away. Mounts fresh per question via key so all fields
+ * (type-specific editors, image previews, answer keys) reset correctly.
+ */
+export function QuestionEditDialog({
+    question,
+    bank,
+    controller,
+    onOpenChange,
+}: {
+    question: BankQuestion;
+    bank: QuestionBank;
+    controller: QuestionBankControllerApi;
+    onOpenChange: (open: boolean) => void;
+}) {
+    return (
+        <Dialog open onOpenChange={onOpenChange}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+                <DialogHeader>
+                    <DialogTitle>Edit Soal — {bank.name}</DialogTitle>
+                    <DialogDescription>
+                        Perubahan langsung tersimpan ke soal ini. Kolom jawaban
+                        siswa yang sudah ada tidak terpengaruh.
+                    </DialogDescription>
+                </DialogHeader>
+                <Form
+                    key={`edit-${question.id}`}
+                    {...controller.update.form(question.id)}
+                    options={{ preserveScroll: true }}
+                    onSuccess={() => onOpenChange(false)}
+                    className="space-y-4"
+                >
+                    {({ processing, errors }) => (
+                        <>
+                            <QuestionFormFields
+                                question={{
+                                    type: question.type,
+                                    content: question.content,
+                                    stimulus: question.stimulus,
+                                    difficulty: question.difficulty,
+                                    weight: question.weight,
+                                    image_path: question.image_path,
+                                    image_url: question.image_url,
+                                    options: question.options,
+                                    pairs: question.pairs,
+                                }}
+                                errors={errors}
+                                idPrefix={`edit-${question.id}`}
+                            />
+                            <div className="flex justify-end gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => onOpenChange(false)}
+                                >
+                                    Batal
+                                </Button>
+                                <Button disabled={processing}>
+                                    Simpan Perubahan
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </Form>
+            </DialogContent>
+        </Dialog>
     );
 }

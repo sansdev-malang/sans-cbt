@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import ImageUploadField from "@/components/admin/image-upload-field";
+import SymbolPalette from "@/components/admin/symbol-palette";
 import InputError from "@/components/input-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,7 +49,6 @@ export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
 };
 
 const DIFFICULTIES = ["Mudah", "Sedang", "Sulit"];
-const ACCEPT = "image/png,image/jpeg,image/webp";
 
 /**
  * Shared question fields used by both the create dialog and the edit page.
@@ -57,10 +58,13 @@ export default function QuestionFormFields({
     question,
     errors,
     idPrefix,
+    paletteStickyClass = "top-0",
 }: {
     question?: QuestionValue | null;
     errors: Partial<Record<string, string>>;
     idPrefix: string;
+    /** Kelas sticky untuk palet simbol; "top-14"/"top-16" jika di halaman dengan header tetap. */
+    paletteStickyClass?: string;
 }) {
     const [type, setType] = useState<QuestionType>(
         question?.type ?? "multiple_choice",
@@ -105,12 +109,19 @@ export default function QuestionFormFields({
             ? question.pairs.length
             : 3,
     );
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [imageRemoved, setImageRemoved] = useState(false);
-    const imageInputRef = useRef<HTMLInputElement>(null);
     const id = (name: string) => `${idPrefix}-${name}`;
     const usesOptions =
         type === "multiple_choice" || type === "multiple_answers";
+
+    // Palet simbol menyisipkan karakter ke kolom teks yang terakhir diklik.
+    const paletteTargetRef = useRef<
+        HTMLTextAreaElement | HTMLInputElement | null
+    >(null);
+    const trackPaletteTarget = (
+        event: React.FocusEvent<HTMLTextAreaElement | HTMLInputElement>,
+    ) => {
+        paletteTargetRef.current = event.currentTarget;
+    };
 
     const toggleCorrect = (index: number) => {
         setCorrectSet((current) => {
@@ -126,6 +137,11 @@ export default function QuestionFormFields({
 
     return (
         <>
+            <SymbolPalette
+                getTarget={() => paletteTargetRef.current}
+                stickyTopClass={paletteStickyClass}
+            />
+            
             <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
                     <Label htmlFor={id("type")}>Tipe soal</Label>
@@ -167,14 +183,17 @@ export default function QuestionFormFields({
             </div>
 
             <div className="grid gap-2">
-                <Label htmlFor={id("stimulus")}>Stimulus / Bacaan (opsional)</Label>
+                <Label htmlFor={id("stimulus")}>
+                    Stimulus / Bacaan (opsional)
+                </Label>
                 <textarea
                     id={id("stimulus")}
                     name="stimulus"
                     rows={4}
                     defaultValue={question?.stimulus ?? ""}
+                    onFocus={trackPaletteTarget}
                     placeholder="Teks bacaan, paragraf, atau skenario yang ditampilkan sebelum pertanyaan (kosongkan jika tidak ada)..."
-                    className="w-full rounded-md border border-input bg-background p-2 text-sm"
+                    className="font-content w-full rounded-md border border-input bg-background p-2 text-sm"
                 />
                 <InputError message={errors.stimulus} />
             </div>
@@ -187,59 +206,26 @@ export default function QuestionFormFields({
                     required
                     rows={4}
                     defaultValue={question?.content ?? ""}
+                    onFocus={trackPaletteTarget}
                     placeholder="Tulis pertanyaan..."
-                    className="w-full rounded-md border border-input bg-background p-2 text-sm"
+                    className="font-content w-full rounded-md border border-input bg-background p-2 text-sm"
                 />
                 <InputError message={errors.content} />
             </div>
 
+            
+
             <div className="grid gap-2">
-                <Label htmlFor={id("image")}>Gambar soal (opsional)</Label>
-                {(imagePreview || (question?.image_url && !imageRemoved)) && (
-                    <img
-                        src={imagePreview ?? question?.image_url ?? undefined}
-                        alt="Pratinjau gambar soal"
-                        className="max-h-40 rounded-md border object-contain"
-                    />
-                )}
-                <div className="flex flex-wrap items-center gap-3">
-                    <Input
-                        ref={imageInputRef}
-                        id={id("image")}
-                        name="image"
-                        type="file"
-                        accept={ACCEPT}
-                        className="w-auto text-xs"
-                        onChange={(event) => {
-                            setImageRemoved(false);
-                            setImagePreview(
-                                event.target.files?.[0]
-                                    ? URL.createObjectURL(event.target.files[0])
-                                    : null,
-                            );
-                        }}
-                    />
-                    {question?.image_path && (
-                        <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                            <input
-                                type="checkbox"
-                                name="remove_image"
-                                value="1"
-                                checked={imageRemoved}
-                                onChange={(event) => {
-                                    setImageRemoved(event.target.checked);
-                                    if (event.target.checked) {
-                                        setImagePreview(null);
-                                        if (imageInputRef.current)
-                                            imageInputRef.current.value = "";
-                                    }
-                                }}
-                            />
-                            Hapus gambar
-                        </label>
-                    )}
-                </div>
-                <InputError message={errors.image} />
+                <Label>Gambar soal (opsional)</Label>
+                <ImageUploadField
+                    fileField="image"
+                    pathField="image_path"
+                    removeField="remove_image"
+                    existingPath={question?.image_path ?? null}
+                    existingUrl={question?.image_url ?? null}
+                    error={errors.image}
+                    label="Tambahkan gambar untuk soal"
+                />
             </div>
 
             {usesOptions && (
@@ -283,6 +269,7 @@ export default function QuestionFormFields({
                                         <Input
                                             name={`options[${index}][content]`}
                                             required
+                                            onFocus={trackPaletteTarget}
                                             placeholder={`Pilihan ${letter}`}
                                             defaultValue={
                                                 existing?.content ?? ""
@@ -417,6 +404,7 @@ export default function QuestionFormFields({
                                 <Input
                                     name={`statements[${index}][content]`}
                                     required
+                                    onFocus={trackPaletteTarget}
                                     placeholder={`Pernyataan ${index + 1}`}
                                     defaultValue={
                                         question?.options?.[index]?.content ??
@@ -536,6 +524,7 @@ export default function QuestionFormFields({
                                     <Input
                                         name={`pairs[${index}][left_text]`}
                                         required
+                                        onFocus={trackPaletteTarget}
                                         placeholder={`Kiri ${index + 1} (yang dijodohkan)`}
                                         defaultValue={
                                             question?.pairs?.[index]
@@ -565,6 +554,7 @@ export default function QuestionFormFields({
                                     <Input
                                         name={`pairs[${index}][right_text]`}
                                         required
+                                        onFocus={trackPaletteTarget}
                                         placeholder={`Kanan ${index + 1} (pasangannya)`}
                                         defaultValue={
                                             question?.pairs?.[index]
@@ -697,55 +687,16 @@ function OptionImageFields({
     existingUrl: string | null;
     error?: string;
 }) {
-    const [preview, setPreview] = useState<string | null>(null);
-    const [removed, setRemoved] = useState(false);
-    const inputRef = useRef<HTMLInputElement>(null);
-    const showsExisting = !preview && existingUrl !== null && !removed;
-
     return (
-        <div className="flex flex-wrap items-center gap-2">
-            {existingPath && (
-                <input type="hidden" name={pathField} value={existingPath} />
-            )}
-            {(preview || showsExisting) && (
-                <img
-                    src={preview ?? existingUrl ?? undefined}
-                    alt="Pratinjau pilihan"
-                    className="size-10 rounded border object-cover"
-                />
-            )}
-            <input
-                ref={inputRef}
-                type="file"
-                name={fileField}
-                accept={ACCEPT}
-                className="text-xs"
-                onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    setPreview(file ? URL.createObjectURL(file) : null);
-                    if (file) setRemoved(false);
-                }}
-            />
-            {existingPath && (
-                <label className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <input
-                        type="checkbox"
-                        name={removeField}
-                        value="1"
-                        checked={removed}
-                        onChange={(event) => {
-                            setRemoved(event.target.checked);
-                            if (event.target.checked) {
-                                setPreview(null);
-                                if (inputRef.current)
-                                    inputRef.current.value = "";
-                            }
-                        }}
-                    />
-                    hapus gambar
-                </label>
-            )}
-            <InputError message={error} />
-        </div>
+        <ImageUploadField
+            fileField={fileField}
+            pathField={pathField}
+            removeField={removeField}
+            existingPath={existingPath}
+            existingUrl={existingUrl}
+            error={error}
+            label="Tambahkan gambar pada pilihan ini"
+            compact
+        />
     );
 }
