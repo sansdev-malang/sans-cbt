@@ -1,242 +1,91 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowRight, BookOpen } from 'lucide-react';
+import { ArrowUpRight, GraduationCap, ShieldCheck } from 'lucide-react';
 import { dashboard, login } from '@/routes';
-import { useEffect, useRef } from 'react';
-import gsap from 'gsap';
 
 export default function Welcome() {
     const { auth } = usePage().props;
-    const containerRef = useRef<HTMLDivElement>(null);
-    const starFieldRef = useRef<HTMLDivElement>(null);
-    const nebulaRef = useRef<HTMLDivElement>(null);
-    const orbitsRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const ctx = gsap.context(() => {
-            // Generate Stars with Layers for Parallax Depth
-            if (starFieldRef.current) {
-                const layers = [
-                    { count: 120, speed: 0.2, scale: 0.6 }, // back layer (slowest)
-                    { count: 60, speed: 0.5, scale: 1.2 },  // mid layer
-                    { count: 20, speed: 1.2, scale: 2.5 }   // front layer (fastest)
-                ];
-
-                layers.forEach((layer, index) => {
-                    const layerDiv = document.createElement('div');
-                    layerDiv.className = `star-layer absolute inset-0 z-0`;
-                    layerDiv.dataset.speed = layer.speed.toString();
-                    
-                    for (let i = 0; i < layer.count; i++) {
-                        const star = document.createElement('div');
-                        const size = layer.scale * (Math.random() * 1.5 + 0.5);
-                        star.style.width = `${size}px`;
-                        star.style.height = `${size}px`;
-                        star.style.backgroundColor = 'white';
-                        star.style.position = 'absolute';
-                        star.style.borderRadius = '50%';
-                        star.style.left = `${Math.random() * 100}%`;
-                        star.style.top = `${Math.random() * 100}%`;
-                        star.style.opacity = `${Math.random() * 0.7 + 0.3}`;
-                        
-                        // Glow for closer stars
-                        if (index > 0 && Math.random() > 0.5) {
-                            star.style.boxShadow = `0 0 ${size * 4}px rgba(255,255,255,0.8)`;
-                        }
-                        layerDiv.appendChild(star);
-                    }
-                    starFieldRef.current?.appendChild(layerDiv);
-                });
-
-                // Twinkling effect
-                gsap.to('.star-layer div', {
-                    opacity: "random(0.2, 1)",
-                    duration: "random(1, 3)",
-                    repeat: -1,
-                    yoyo: true,
-                    ease: "sine.inOut"
-                });
-            }
-
-            // Continuous rotation for rings
-            if (orbitsRef.current) {
-                gsap.to(orbitsRef.current.children, {
-                    rotationZ: "+=360",
-                    rotationX: "random(-10, 10)",
-                    rotationY: "random(-10, 10)",
-                    duration: "random(40, 80)",
-                    repeat: -1,
-                    ease: "none"
-                });
-            }
-
-            // Interactive Mouse Parallax
-            const handleMouseMove = (e: MouseEvent) => {
-                // Normalize mouse coordinates from -1 to 1
-                const x = (e.clientX / window.innerWidth - 0.5) * 2;
-                const y = (e.clientY / window.innerHeight - 0.5) * 2;
-
-                // Move star layers
-                document.querySelectorAll('.star-layer').forEach((layer: any) => {
-                    const speed = parseFloat(layer.dataset.speed);
-                    gsap.to(layer, {
-                        x: x * -30 * speed,
-                        y: y * -30 * speed,
-                        duration: 1.5,
-                        ease: "power2.out",
-                        overwrite: "auto"
-                    });
-                });
-
-                // Move nebula slightly
-                if (nebulaRef.current) {
-                    gsap.to(nebulaRef.current, {
-                        x: x * -50,
-                        y: y * -50,
-                        duration: 2,
-                        ease: "power2.out",
-                        overwrite: "auto"
-                    });
-                }
-
-                // 3D Tilt the orbits wrapper
-                if (orbitsRef.current) {
-                    gsap.to(orbitsRef.current, {
-                        rotationX: -y * 20,
-                        rotationY: x * 20,
-                        duration: 1.5,
-                        ease: "power2.out",
-                        overwrite: "auto"
-                    });
-                }
-            };
-
-            window.addEventListener('mousemove', handleMouseMove);
-
-            // Entrance animation for main content
-            gsap.from('.hero-element', {
-                y: 50,
-                opacity: 0,
-                duration: 1.2,
-                stagger: 0.15,
-                ease: "power3.out",
-                delay: 0.2
-            });
-
-            return () => {
-                window.removeEventListener('mousemove', handleMouseMove);
-            };
-
-        }, containerRef);
-
-        return () => ctx.revert();
-    }, []);
+    const destination = auth.user ? dashboard() : login();
+    const actionLabel = auth.user ? 'Buka dashboard' : 'Masuk ke CBT';
 
     return (
         <>
             <Head title="CBT SD Anak Saleh" />
 
-            <div ref={containerRef} className="min-h-screen bg-[#030305] text-white flex flex-col items-center justify-center relative overflow-hidden font-sans">
-                
-                {/* Interactive Starfield - oversized to hide edges when moving */}
-                <div ref={starFieldRef} className="absolute -inset-[10%] z-0 pointer-events-none opacity-80" />
+            <main className="relative isolate min-h-screen overflow-hidden bg-slate-50 text-slate-950">
+                <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_78%_24%,rgba(139,92,246,0.16),transparent_23%),radial-gradient(circle_at_20%_85%,rgba(59,130,246,0.12),transparent_30%),linear-gradient(135deg,#f8fafc_0%,#f5f3ff_48%,#f8fafc_100%)]" />
+                <div className="absolute inset-0 -z-10 opacity-[0.32] [background-image:linear-gradient(rgba(99,102,241,0.16)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.16)_1px,transparent_1px)] [background-size:42px_42px] [mask-image:linear-gradient(to_bottom,black,transparent_82%)]" />
+                <div className="absolute top-[-14rem] right-[-10rem] -z-10 size-[32rem] rounded-full border border-violet-300/30" />
+                <div className="absolute top-[-8rem] right-[-4rem] -z-10 size-[20rem] rounded-full border border-blue-300/30" />
 
-                {/* Interactive Nebula */}
-                <div ref={nebulaRef} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center z-0">
-                    <div className="w-[800px] h-[800px] bg-indigo-900/30 rounded-full blur-[150px]" />
-                    <div className="absolute w-[500px] h-[500px] bg-purple-700/20 rounded-full blur-[120px]" />
-                    <div className="absolute w-[300px] h-[300px] bg-blue-500/20 rounded-full blur-[100px]" />
+                <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-6 sm:px-10 lg:px-12">
+                    <header className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="grid size-10 place-items-center rounded-xl bg-violet-600 text-white shadow-lg shadow-violet-500/20">
+                                <GraduationCap className="size-5" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold tracking-tight text-slate-950">Anak Saleh</p>
+                                <p className="text-[10px] font-semibold tracking-[0.18em] text-violet-600 uppercase">Computer Based Test</p>
+                            </div>
+                        </div>
+
+                        <span className="hidden rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-500 shadow-sm sm:block">Portal Ujian Digital</span>
+                    </header>
+
+                    <section className="flex flex-1 items-center py-16 sm:py-20">
+                        <div className="grid w-full items-center gap-14 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
+                            <div className="max-w-2xl">
+                                <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-emerald-700">
+                                    <span className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_10px_3px_rgba(16,185,129,0.2)]" />
+                                    RUANG UJIAN TERINTEGRASI
+                                </div>
+
+                                <h1 className="max-w-xl pb-4 text-5xl leading-[1.17] font-black tracking-[-0.055em] text-balance sm:text-6xl lg:text-7xl">
+                                    Ujian cerdas,
+                                    <span className="block bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent">langkah pasti.</span>
+                                </h1>
+
+                                <p className="mt-6 max-w-lg text-base leading-7 text-slate-600 sm:text-lg">
+                                    Sistem CBT SD Anak Saleh untuk pengalaman ujian yang fokus, aman, dan nyaman.
+                                </p>
+
+                                <Link
+                                    href={destination}
+                                    className="mt-9 inline-flex items-center gap-3 rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-violet-700 hover:shadow-[0_12px_30px_rgba(109,40,217,0.22)] focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 focus-visible:outline-none"
+                                >
+                                    {actionLabel}
+                                    <ArrowUpRight className="size-4" />
+                                </Link>
+                            </div>
+
+                            <div className="relative mx-auto w-full max-w-md lg:max-w-none">
+                                <div className="absolute -inset-5 rounded-[2rem] bg-violet-400/20 blur-3xl" />
+                                <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-2xl shadow-slate-900/10 backdrop-blur-xl sm:p-6">
+                                    <div className="flex items-center justify-between border-b border-slate-100 pb-5">
+                                        <div className="flex items-center gap-3">
+                                            <div className="size-2 rounded-full bg-emerald-500" />
+                                            <span className="font-mono text-xs text-slate-500">CBT / READY</span>
+                                        </div>
+                                        <ShieldCheck className="size-5 text-violet-600" />
+                                    </div>
+                                    <div className="mt-8 space-y-4">
+                                        <div className="h-2 w-24 rounded-full bg-violet-500/70" />
+                                        <div className="h-2 w-full rounded-full bg-slate-100" />
+                                        <div className="h-2 w-4/5 rounded-full bg-slate-100" />
+                                        <div className="mt-7 grid grid-cols-3 gap-3">
+                                            {[0, 1, 2].map((item) => (
+                                                <div key={item} className="aspect-square rounded-xl border border-slate-100 bg-slate-50" />
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <footer className="text-xs text-slate-400">© {new Date().getFullYear()} SD Anak Saleh</footer>
                 </div>
-                
-                {/* Interactive 3D Rings */}
-                <div style={{ perspective: '1000px' }} className="absolute inset-0 pointer-events-none flex items-center justify-center z-0">
-                    <div ref={orbitsRef} style={{ transformStyle: 'preserve-3d' }} className="w-full h-full flex items-center justify-center">
-                        <div className="absolute w-[700px] h-[700px] rounded-full border border-white/5" />
-                        <div className="absolute w-[550px] h-[550px] rounded-full border border-indigo-400/10" />
-                        <div className="absolute w-[400px] h-[400px] rounded-full border border-blue-400/10" />
-                        <div className="absolute w-[800px] h-[800px] rounded-full border-t border-purple-500/20" />
-                        <div className="absolute w-[650px] h-[650px] rounded-full border-b border-cyan-400/20" />
-                    </div>
-                </div>
-
-                {/* Main Content */}
-                <div className="z-10 flex flex-col items-center text-center px-4 w-full max-w-4xl">
-                    
-                    {/* Top Badge */}
-                    <div className="hero-element flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur-md mb-8 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-                        <span className="text-[10px] font-bold tracking-[0.2em] text-white/70">COMPUTER BASED TEST</span>
-                    </div>
-
-                    {/* Title */}
-                    <div className="hero-element flex flex-col items-center relative z-20">
-                        <span className="text-7xl sm:text-[8rem] font-black tracking-tighter leading-none -mt-2 sm:-mt-6">CBT</span>
-                        <span className="text-7xl sm:text-[8rem] font-black tracking-tighter leading-none -mt-2 sm:-mt-6">Anak Saleh</span>
-                    </div>
-
-                    {/* Modern Tapered Glowing Bar (Smooth & Clean) */}
-                    <div className="hero-element relative w-[92%] max-w-2xl flex items-center justify-center my-8">
-                        {/* Extended hairline base */}
-                        <div className="absolute inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent" />
-
-                        {/* Ambient soft glow */}
-                        <div className="absolute w-3/4 h-3 bg-gradient-to-r from-transparent via-cyan-400/25 to-transparent blur-md" />
-                        <div className="absolute w-1/2 h-5 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent blur-lg" />
-
-                        {/* Tapered bar: thin sleek ends & standard center */}
-                        <svg
-                            viewBox="0 0 1000 8"
-                            fill="none"
-                            preserveAspectRatio="none"
-                            className="w-full h-1.5 sm:h-2 relative z-10"
-                        >
-                            <path
-                                d="M 0,4 C 280,3.8 420,1.5 500,1.5 C 580,1.5 720,3.8 1000,4 C 720,4.2 580,6.5 500,6.5 C 420,6.5 280,4.2 0,4 Z"
-                                fill="url(#hero-bar-gradient)"
-                            />
-                            <defs>
-                                <linearGradient id="hero-bar-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stopColor="transparent" />
-                                    <stop offset="15%" stopColor="rgba(99, 102, 241, 0.2)" />
-                                    <stop offset="35%" stopColor="rgba(56, 189, 248, 0.7)" />
-                                    <stop offset="50%" stopColor="rgba(255, 255, 255, 0.95)" />
-                                    <stop offset="65%" stopColor="rgba(56, 189, 248, 0.7)" />
-                                    <stop offset="85%" stopColor="rgba(99, 102, 241, 0.2)" />
-                                    <stop offset="100%" stopColor="transparent" />
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                    </div>
-
-                    {/* Subtitle */}
-                    <p className="hero-element text-lg sm:text-2xl font-medium text-white/80 max-w-2xl leading-relaxed">
-                        Platform evaluasi pembelajaran siswa SD Anak Saleh yang{' '}
-                        <span className="inline-block rounded border border-indigo-400/30 bg-indigo-500/10 px-2 py-0.5 backdrop-blur-sm mt-1 sm:mt-0 text-indigo-100">
-                            aman dan terpercaya
-                        </span>
-                    </p>
-
-                    {/* Description */}
-                    <p className="hero-element mt-6 text-sm sm:text-base text-white/40 max-w-xl font-light">
-                        Kerjakan ujian dengan lancar tanpa hambatan, serta pantau hasil evaluasi secara langsung dan otomatis.
-                    </p>
-
-                    {/* Buttons */}
-                    <div className="hero-element mt-10 flex flex-col sm:flex-row items-center gap-4">
-                        <Link 
-                            href={auth.user ? dashboard() : login()}
-                            className="flex items-center justify-center gap-2 rounded-xl bg-white text-black px-6 py-3 font-semibold transition-all hover:bg-white/90 hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] w-full sm:w-auto"
-                        >
-                            {auth.user ? 'Masuk Dashboard' : 'Mulai Ujian'} <ArrowRight className="size-4" />
-                        </Link>
-                        <a 
-                            href="#panduan" 
-                            className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 font-semibold text-white backdrop-blur-md transition-all hover:bg-white/10 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] w-full sm:w-auto"
-                        >
-                            <BookOpen className="size-4" /> Lihat Panduan
-                        </a>
-                    </div>
-                </div>
-            </div>
+            </main>
         </>
     );
 }
