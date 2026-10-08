@@ -22,6 +22,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 
+// 1-Click SSO Login Receiver from SANS SD & SMP
+Route::get('/sso/login', [\App\Http\Controllers\SsoController::class, 'handle'])->name('sso.login');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 });
@@ -71,6 +74,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::post('integrations/test', [AdminDatabaseIntegrationController::class, 'testConnection'])->name('integrations.test');
         Route::get('integrations/preview', [AdminDatabaseIntegrationController::class, 'preview'])->name('integrations.preview');
         Route::post('integrations/switch-unit', [AdminDatabaseIntegrationController::class, 'switchUnit'])->name('integrations.switch-unit');
+        Route::post('integrations/sync', [AdminDatabaseIntegrationController::class, 'sync'])->name('integrations.sync');
     });
 
 // Question media is stored on the private disk and accessible to all authenticated users (admin, teacher, student).

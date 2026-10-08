@@ -208,4 +208,132 @@ class DatabaseIntegrationService
             ],
         };
     }
+
+    /**
+     * Synchronize master data from SD / SMP databases into CBT local database.
+     */
+    public function syncMasterData(string $targetUnit = 'all'): array
+    {
+        $units = $targetUnit === 'all' ? ['sd', 'smp'] : [$targetUnit];
+        $summary = [
+            'teachers_synced' => 0,
+            'classes_synced' => 0,
+            'students_synced' => 0,
+            'units_processed' => [],
+            'errors' => [],
+        ];
+
+        foreach ($units as $unit) {
+            try {
+                UnitContext::setUnit($unit);
+                $info = UnitContext::getUnitInfo($unit);
+
+                // 1. Get active academic year
+                $activeAy = AcademicYear::where('is_active', true)->first()
+                    ?? AcademicYear::orderBy('id', 'desc')->first();
+                $academicYearName = $activeAy?->name ?? '2026/2027';
+
+                // 2. Sync Teachers
+                $masterTeachers = Teacher::where('status', 'Active')->orWhereNull('status')->get();
+                $teacherMap = [];
+
+                foreach ($masterTeachers as $mt) {
+                    $email = $mt->email ?: (strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $mt->name)) . "_{$unit}@sans.test");
+                    
+                    $user = \App\Models\User::firstOrCreate(
+                        ['email' => $email],
+                        [
+                            'name' => $mt->name,
+                            'password' => 'sans12345',
+                            'role' => \App\Role::Guru,
+                        ]
+                    );
+
+                    $cbtTeacher = \App\Models\Teacher::updateOrCreate(
+                        ['nip' => $mt->nip ?: ($mt->nik ?: "EMP_{$unit}_{$mt->id}")],
+                        [
+                            'user_id' => $user->id,
+                            'full_name' => $mt->name,
+                            'phone' => $mt->phone ?: $mt->mobile_phone,
+                        ]
+                    );
+
+                    $teacherMap[$mt->id] = $cbtTeacher->id;
+                    $summary['teachers_synced']++;
+                }
+
+                // 3. Sync Classrooms
+                $masterClassrooms = Classroom::with(['classLevel', 'academicYear'])->get();
+                $classMap = [];
+
+                foreach ($masterClassrooms as $mc) {
+                    $homeroomId = isset($teacherMap[$mc->homeroom_teacher_id]) 
+                        ? $teacherMap[$mc->homeroom_teacher_id] 
+                        : null;
+
+                    $cbtClass = \App\Models\SchoolClass::updateOrCreate(
+                        [
+                            'name' => $mc->name,
+                            'academic_year' => $mc->academicYear?->name ?? $academicYearName,
+                        ],
+                        [
+                            'level' => $mc->classLevel?->name ?? (strtoupper($unit) . ' ' . substr($mc->name, 0, 1)),
+                            'homeroom_teacher_id' => $homeroomId,
+                        ]
+                    );
+
+                    $classMap[$mc->id] = $cbtClass->id;
+                    $summary['classes_synced']++;
+                }
+
+                // 4. Sync Students
+                $masterStudents = Student::with('classroom')->where('status', 'aktif')->orWhereNull('status')->get();
+
+                foreach ($masterStudents as $ms) {
+                    $studentEmail = $ms->nisn 
+                        ? "{$ms->nisn}@siswa.sans.test" 
+                        : "siswa_{$unit}_{$ms->id}@sans.test";
+
+                    $studentName = $ms->full_name ?: ($ms->name ?: "Siswa {$ms->nis}");
+
+                    $user = \App\Models\User::firstOrCreate(
+                        ['email' => $studentEmail],
+                        [
+                            'name' => $studentName,
+                            'password' => 'sans12345',
+                            'role' => \App\Role::Siswa,
+                        ]
+                    );
+
+                    $cbtStudent = \App\Models\Student::updateOrCreate(
+                        ['nis' => $ms->nis ?: "NIS_{$unit}_{$ms->id}"],
+                        [
+                            'user_id' => $user->id,
+                            'nisn' => $ms->nisn,
+                            'full_name' => $studentName,
+                            'gender' => $ms->gender === 'P' || $ms->gender === 'female' ? 'P' : 'L',
+                            'birth_date' => $ms->birth_date,
+                            'phone' => $ms->phone ?: $ms->parent_phone,
+                            'address' => $ms->address,
+                        ]
+                    );
+
+                    // Assign to class pivot
+                    if ($ms->classroom_id && isset($classMap[$ms->classroom_id])) {
+                        $targetClassId = $classMap[$ms->classroom_id];
+                        $cbtStudent->classes()->syncWithoutDetaching([$targetClassId]);
+                    }
+
+                    $summary['students_synced']++;
+                }
+
+                $summary['units_processed'][] = $info['name'];
+            } catch (\Throwable $e) {
+                Log::error("[Database Integration] Error syncing unit {$unit}: " . $e->getMessage());
+                $summary['errors'][] = "Unit {$unit}: " . $e->getMessage();
+            }
+        }
+
+        return $summary;
+    }
 }

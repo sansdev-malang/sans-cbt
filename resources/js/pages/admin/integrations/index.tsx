@@ -103,7 +103,39 @@ export default function DatabaseIntegrationsIndex({
     const [loadingPreview, setLoadingPreview] = useState<boolean>(false);
     const [testingUnit, setTestingUnit] = useState<string | null>(null);
     const [testingAll, setTestingAll] = useState<boolean>(false);
+    const [syncingUnit, setSyncingUnit] = useState<string | null>(null);
     const [searchFilter, setSearchFilter] = useState<string>('');
+
+    // Synchronize Master Data (SD/SMP -> CBT)
+    const handleSync = async (unitKey: string = 'all') => {
+        setSyncingUnit(unitKey);
+        try {
+            const res = await fetch('/admin/integrations/sync', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                },
+                body: JSON.stringify({ unit: unitKey }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success('Sinkronisasi Berhasil!', {
+                    description: data.message,
+                });
+                router.reload();
+            } else {
+                toast.error('Gagal Sinkronisasi', {
+                    description: data.message || 'Terjadi kendala saat menyinkronkan data.',
+                });
+            }
+        } catch (err: any) {
+            toast.error('Kesalahan Jaringan', { description: err.message });
+        } finally {
+            setSyncingUnit(null);
+        }
+    };
 
     // Switch Active Unit in CBT
     const handleSwitchUnit = async (unitKey: string) => {
@@ -235,7 +267,7 @@ export default function DatabaseIntegrationsIndex({
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2.5 shrink-0">
+                    <div className="flex flex-wrap items-center gap-2.5 shrink-0">
                         <Button
                             variant="outline"
                             size="sm"
@@ -246,20 +278,39 @@ export default function DatabaseIntegrationsIndex({
                             Refresh Status
                         </Button>
                         <Button
+                            variant="outline"
                             size="sm"
                             onClick={handleTestAll}
                             disabled={testingAll}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs"
+                            className="text-xs font-semibold"
                         >
                             {testingAll ? (
                                 <>
                                     <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                                    Menguji Semua...
+                                    Menguji...
                                 </>
                             ) : (
                                 <>
-                                    <Zap className="w-3.5 h-3.5 mr-1.5" />
-                                    Uji Semua Koneksi DB
+                                    <Zap className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
+                                    Uji Semua DB
+                                </>
+                            )}
+                        </Button>
+                        <Button
+                            size="sm"
+                            onClick={() => handleSync('all')}
+                            disabled={syncingUnit !== null}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs"
+                        >
+                            {syncingUnit === 'all' ? (
+                                <>
+                                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                                    Menyinkronkan...
+                                </>
+                            ) : (
+                                <>
+                                    <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                                    Tarik & Sinkronkan Semua Data
                                 </>
                             )}
                         </Button>
@@ -456,27 +507,50 @@ export default function DatabaseIntegrationsIndex({
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="flex items-center justify-between gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleTestConnection(key)}
-                                            disabled={testingUnit === key}
-                                            className="text-xs font-semibold"
-                                        >
-                                            {testingUnit === key ? (
-                                                <>
-                                                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                                                    Menguji...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Activity className="w-3.5 h-3.5 mr-1.5 text-slate-500" />
-                                                    Uji Koneksi
-                                                </>
-                                            )}
-                                        </Button>
+                                    <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                                        <div className="flex items-center gap-1.5">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleTestConnection(key)}
+                                                disabled={testingUnit === key}
+                                                className="text-xs font-semibold"
+                                            >
+                                                {testingUnit === key ? (
+                                                    <>
+                                                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                                                        Menguji...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Activity className="w-3.5 h-3.5 mr-1.5 text-slate-500" />
+                                                        Uji Koneksi
+                                                    </>
+                                                )}
+                                            </Button>
+
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleSync(key)}
+                                                disabled={syncingUnit !== null}
+                                                className="text-xs font-semibold text-slate-700 dark:text-slate-200"
+                                            >
+                                                {syncingUnit === key ? (
+                                                    <>
+                                                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin text-indigo-500" />
+                                                        Menyinkronkan...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <RefreshCw className="w-3.5 h-3.5 mr-1.5 text-indigo-500" />
+                                                        Tarik Data {u.info.name}
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
 
                                         <Button
                                             type="button"

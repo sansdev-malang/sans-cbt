@@ -97,4 +97,23 @@ class DatabaseIntegrationController extends Controller
             'message' => 'Unit aktif berhasil dialihkan ke ' . strtoupper($validated['unit']),
         ]);
     }
+
+    /**
+     * Synchronize master data from SD / SMP into CBT local database.
+     */
+    public function sync(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'unit' => 'nullable|string|in:sd,smp,all',
+        ]);
+
+        $unit = $validated['unit'] ?? 'all';
+        $summary = $this->service->syncMasterData($unit);
+
+        return response()->json([
+            'success' => empty($summary['errors']),
+            'summary' => $summary,
+            'message' => "Sinkronisasi berhasil! {$summary['students_synced']} siswa, {$summary['classes_synced']} kelas, dan {$summary['teachers_synced']} guru berhasil disinkronkan ke database CBT.",
+        ]);
+    }
 }
