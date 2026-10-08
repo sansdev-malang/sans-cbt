@@ -1,11 +1,22 @@
 import { Head, router } from "@inertiajs/react";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { AdminPagination } from "@/components/admin/admin-pagination";
 import Heading from "@/components/heading";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 import { dashboard } from "@/routes/admin";
-import { index as auditLogsIndex } from "@/routes/admin/audit-logs";
+import { index as auditLogsIndex, purge as auditLogsPurge } from "@/routes/admin/audit-logs";
 
 type Paginator<T> = {
     data: T[];
@@ -26,6 +37,10 @@ type LogRow = {
     ip_address: string | null;
     created_at_label: string;
 };
+type RetentionOption = {
+    days: number;
+    label: string;
+};
 
 const LEVEL_VARIANT: Record<
     string,
@@ -42,14 +57,21 @@ export default function AdminAuditLogsIndex({
     levels,
     eventTypes,
     filters,
+    total_count,
+    retention_options,
 }: {
     logs: Paginator<LogRow>;
     levels: string[];
     eventTypes: string[];
     filters: { level: string; event: string };
+    total_count: number;
+    retention_options: RetentionOption[];
 }) {
     const [level, setLevel] = useState(filters.level);
     const [event, setEvent] = useState(filters.event);
+    const [purgeOpen, setPurgeOpen] = useState(false);
+    const [selectedDays, setSelectedDays] = useState<number>(30);
+    const [purging, setPurging] = useState(false);
 
     const applyFilter = (nextLevel: string, nextEvent: string) => {
         router.get(
@@ -59,14 +81,119 @@ export default function AdminAuditLogsIndex({
         );
     };
 
+    const handlePurge = () => {
+        setPurging(true);
+        router.delete(auditLogsPurge().url, {
+            data: { days: selectedDays },
+            onFinish: () => {
+                setPurging(false);
+                setPurgeOpen(false);
+            },
+        });
+    };
+
+    const selectedOption = retention_options.find((o) => o.days === selectedDays);
+    const purgeDescription =
+        selectedDays === 0
+            ? "Semua audit log (kecuali log sesi ujian yang masih berlangsung) akan dihapus permanen."
+            : `Audit log yang dibuat lebih dari ${selectedDays} hari yang lalu akan dihapus permanen.`;
+
     return (
         <>
             <Head title="Audit Log" />
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
-                <Heading
-                    title="Audit Log"
-                    description="Jejak aktivitas penting dan pelanggaran keamanan pada sistem CBT."
-                />
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <Heading
+                        title="Audit Log"
+                        description="Jejak aktivitas penting dan pelanggaran keamanan pada sistem CBT."
+                    />
+
+                    <Dialog open={purgeOpen} onOpenChange={setPurgeOpen}>
+                        <DialogTrigger asChild>
+                            <Button
+                                variant="outline"
+                                className="shrink-0 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40 dark:hover:text-red-300"
+                            >
+                                <Trash2 className="size-4" />
+                                Bersihkan Log
+                            </Button>
+                        </DialogTrigger>
+
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Bersihkan Audit Log</DialogTitle>
+                                <DialogDescription>
+                                    Pilih periode retensi. Log yang terkait sesi
+                                    ujian yang sedang berlangsung{" "}
+                                    <strong>tidak akan dihapus</strong>.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="grid gap-4 py-2">
+                                {/* Total count info */}
+                                <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400">
+                                    <span>
+                                        Total log saat ini:{" "}
+                                        <strong>{total_count.toLocaleString("id-ID")}</strong>{" "}
+                                        entri
+                                    </span>
+                                </div>
+
+                                {/* Retention options */}
+                                <div className="grid gap-2">
+                                    <p className="text-sm font-medium">
+                                        Hapus log:
+                                    </p>
+                                    <div className="grid gap-2">
+                                        {retention_options.map((option) => (
+                                            <label
+                                                key={option.days}
+                                                className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors ${
+                                                    selectedDays === option.days
+                                                        ? "border-red-400 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-950/40 dark:text-red-300"
+                                                        : "border-border hover:bg-muted"
+                                                }`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="retention"
+                                                    value={option.days}
+                                                    checked={selectedDays === option.days}
+                                                    onChange={() => setSelectedDays(option.days)}
+                                                    className="accent-red-600"
+                                                />
+                                                {option.label}
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Warning message */}
+                                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
+                                    ⚠️ {purgeDescription} Tindakan ini{" "}
+                                    <strong>tidak dapat dibatalkan</strong>.
+                                </div>
+                            </div>
+
+                            <DialogFooter>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setPurgeOpen(false)}
+                                    disabled={purging}
+                                >
+                                    Batal
+                                </Button>
+                                <Button
+                                    onClick={handlePurge}
+                                    disabled={purging}
+                                    className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600"
+                                >
+                                    {purging ? "Menghapus…" : `Hapus — ${selectedOption?.label ?? ""}`}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
 
                 <Card>
                     <CardHeader>

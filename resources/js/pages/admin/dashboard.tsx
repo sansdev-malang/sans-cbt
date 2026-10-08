@@ -27,6 +27,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { dashboard } from '@/routes/admin';
+import { index as questionsIndex } from '@/routes/admin/questions';
 
 type Stats = {
     total_students: number;
@@ -230,7 +231,7 @@ export default function AdminDashboard({
                             </Link>
                         </Button>
                         <Button asChild size="sm">
-                            <Link href="/admin/question-banks">
+                            <Link href={questionsIndex()}>
                                 <FileQuestion className="mr-1.5 size-4" />
                                 Bank Soal
                             </Link>

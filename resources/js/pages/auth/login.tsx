@@ -22,7 +22,7 @@ export default function Login({ status, canResetPassword }: Props) {
         <>
             <Head title="Masuk" />
 
-            <div className="[&_button]:border-slate-200 [&_button]:bg-white [&_button]:text-slate-700 [&_button:hover]:bg-slate-50 [&_.bg-background]:bg-white [&_.text-muted-foreground]:text-slate-400">
+            <div className="[&_button]:border-slate-200 [&_button]:bg-white [&_button]:text-slate-700 [&_button:hover]:bg-slate-50 [&_.bg-background]:bg-white [&_.text-muted-foreground]:text-slate-400 dark:[&_button]:border-slate-700 dark:[&_button]:bg-slate-800 dark:[&_button]:text-slate-200 dark:[&_button:hover]:bg-slate-700/80 dark:[&_.bg-background]:bg-slate-900 dark:[&_.text-muted-foreground]:text-slate-400">
                 <PasskeyVerify
                     label="Masuk dengan passkey"
                     loadingLabel="Mengautentikasi..."
@@ -41,7 +41,7 @@ export default function Login({ status, canResetPassword }: Props) {
                             <div className="grid gap-2">
                                 <Label
                                     htmlFor="email"
-                                    className="text-slate-700"
+                                    className="text-slate-700 dark:text-slate-200"
                                 >
                                     Email
                                 </Label>
@@ -54,7 +54,7 @@ export default function Login({ status, canResetPassword }: Props) {
                                     tabIndex={1}
                                     autoComplete="email"
                                     placeholder="nama@sekolahanaksaleh.sch.id"
-                                    className="border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:border-violet-500 focus-visible:ring-violet-500/20"
+                                    className="border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:border-violet-500 focus-visible:ring-violet-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus-visible:border-violet-400 dark:focus-visible:ring-violet-400/20"
                                 />
                                 <InputError message={errors.email} />
                             </div>
@@ -63,14 +63,14 @@ export default function Login({ status, canResetPassword }: Props) {
                                 <div className="flex items-center">
                                     <Label
                                         htmlFor="password"
-                                        className="text-slate-700"
+                                        className="text-slate-700 dark:text-slate-200"
                                     >
                                         Kata sandi
                                     </Label>
                                     {canResetPassword && (
                                         <TextLink
                                             href={request()}
-                                            className="ml-auto text-sm text-violet-700 decoration-violet-300 hover:text-violet-900"
+                                            className="ml-auto text-sm text-violet-700 decoration-violet-300 hover:text-violet-900 dark:text-violet-400 dark:decoration-violet-600 dark:hover:text-violet-300"
                                             tabIndex={5}
                                         >
                                             Lupa kata sandi?
@@ -84,21 +84,21 @@ export default function Login({ status, canResetPassword }: Props) {
                                     tabIndex={2}
                                     autoComplete="current-password"
                                     placeholder="Masukkan kata sandi"
-                                    className="border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:border-violet-500 focus-visible:ring-violet-500/20 [&+button]:text-slate-400 [&+button:hover]:text-slate-700"
+                                    className="border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus-visible:border-violet-500 focus-visible:ring-violet-500/20 [&+button]:text-slate-400 [&+button:hover]:text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus-visible:border-violet-400 dark:focus-visible:ring-violet-400/20 dark:[&+button]:text-slate-400 dark:[&+button:hover]:text-slate-200"
                                 />
                                 <InputError message={errors.password} />
                             </div>
 
-                            <div className="flex items-center space-x-3 text-slate-600">
+                            <div className="flex items-center space-x-3 text-slate-600 dark:text-slate-300">
                                 <Checkbox
                                     id="remember"
                                     name="remember"
                                     tabIndex={3}
-                                    className="border-slate-400 data-[state=checked]:border-violet-600 data-[state=checked]:bg-violet-600"
+                                    className="border-slate-400 data-[state=checked]:border-violet-600 data-[state=checked]:bg-violet-600 dark:border-slate-600 dark:data-[state=checked]:border-violet-500 dark:data-[state=checked]:bg-violet-500"
                                 />
                                 <Label
                                     htmlFor="remember"
-                                    className="text-slate-600"
+                                    className="text-slate-600 dark:text-slate-300"
                                 >
                                     Ingat saya
                                 </Label>
@@ -107,7 +107,7 @@ export default function Login({ status, canResetPassword }: Props) {
                             <Button
                                 type="submit"
                                 size="lg"
-                                className="w-full bg-slate-900 text-white hover:bg-violet-700"
+                                className="w-full bg-slate-900 text-white hover:bg-violet-700 dark:bg-violet-600 dark:hover:bg-violet-500"
                                 tabIndex={4}
                                 disabled={processing}
                                 data-test="login-button"
@@ -125,12 +125,12 @@ export default function Login({ status, canResetPassword }: Props) {
             </Form>
 
             {status && (
-                <div className="mt-4 text-center text-sm font-medium text-violet-700">
+                <div className="mt-4 text-center text-sm font-medium text-violet-700 dark:text-violet-400">
                     {status}
                 </div>
             )}
 
-            <p className="mt-8 text-center text-sm leading-5 text-slate-500">
+            <p className="mt-8 text-center text-sm leading-5 text-slate-500 dark:text-slate-400">
                 Belum punya akun? Akun dibuat oleh admin sekolah — silakan
                 hubungi operator atau wali kelas Anda.
             </p>

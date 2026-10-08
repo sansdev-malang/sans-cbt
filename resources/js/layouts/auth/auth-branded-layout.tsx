@@ -12,11 +12,11 @@ export default function AuthBrandedLayout({
     const { name } = usePage().props;
 
     return (
-        <div className="relative isolate grid min-h-svh overflow-hidden bg-slate-50 lg:grid-cols-[0.95fr_1.05fr]">
-            <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_76%_18%,rgba(139,92,246,0.16),transparent_24%),radial-gradient(circle_at_14%_90%,rgba(59,130,246,0.12),transparent_30%)]" />
-            <div className="absolute inset-0 -z-10 opacity-30 [background-image:linear-gradient(rgba(99,102,241,0.16)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.16)_1px,transparent_1px)] [background-size:42px_42px]" />
+        <div className="relative isolate grid min-h-svh overflow-hidden bg-slate-50 lg:grid-cols-[0.95fr_1.05fr] dark:bg-slate-950">
+            <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_76%_18%,rgba(139,92,246,0.16),transparent_24%),radial-gradient(circle_at_14%_90%,rgba(59,130,246,0.12),transparent_30%)] dark:bg-[radial-gradient(circle_at_76%_18%,rgba(139,92,246,0.22),transparent_28%),radial-gradient(circle_at_14%_90%,rgba(59,130,246,0.18),transparent_35%)]" />
+            <div className="absolute inset-0 -z-10 opacity-30 [background-image:linear-gradient(rgba(99,102,241,0.16)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.16)_1px,transparent_1px)] [background-size:42px_42px] dark:opacity-20 dark:[background-image:linear-gradient(rgba(139,92,246,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.2)_1px,transparent_1px)]" />
 
-            <aside className="relative hidden overflow-hidden bg-slate-900 p-10 text-white lg:flex lg:flex-col lg:justify-between">
+            <aside className="relative hidden overflow-hidden bg-slate-900 p-10 text-white lg:flex lg:flex-col lg:justify-between lg:border-r lg:border-slate-800/80">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_90%_12%,rgba(139,92,246,0.55),transparent_25%),radial-gradient(circle_at_18%_95%,rgba(37,99,235,0.4),transparent_30%)]" />
                 <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(196,181,253,0.4)_1px,transparent_1px),linear-gradient(90deg,rgba(196,181,253,0.4)_1px,transparent_1px)] [background-size:42px_42px]" />
 
@@ -64,7 +64,7 @@ export default function AuthBrandedLayout({
                 <div className="w-full max-w-sm">
                     <Link
                         href={home()}
-                        className="mb-10 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-violet-700"
+                        className="mb-10 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-violet-700 dark:text-slate-400 dark:hover:text-violet-300"
                     >
                         <ArrowLeft className="size-4" />
                         Kembali ke beranda
@@ -75,17 +75,17 @@ export default function AuthBrandedLayout({
                             <GraduationCap className="size-5" />
                         </span>
                         <span className="grid leading-tight">
-                            <span className="text-sm font-semibold text-slate-950">{name}</span>
-                            <span className="text-[10px] font-semibold tracking-[0.16em] text-violet-600 uppercase">Computer Based Test</span>
+                            <span className="text-sm font-semibold text-slate-950 dark:text-slate-100">{name}</span>
+                            <span className="text-[10px] font-semibold tracking-[0.16em] text-violet-600 uppercase dark:text-violet-400">Computer Based Test</span>
                         </span>
                     </div>
 
                     <div className="mb-8 grid gap-2">
-                        <h1 className="text-3xl font-bold tracking-tight text-slate-950">{title}</h1>
-                        {description && <p className="text-sm leading-6 text-slate-500">{description}</p>}
+                        <h1 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-slate-100">{title}</h1>
+                        {description && <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{description}</p>}
                     </div>
 
-                    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/[0.06] sm:p-8">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/[0.06] sm:p-8 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/40">
                         {children}
                     </div>
                 </div>

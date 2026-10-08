@@ -53,6 +53,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::resource('students', AdminStudentController::class)->except('show');
         Route::resource('teachers', AdminTeacherController::class)->except('show');
         Route::resource('questions', AdminQuestionController::class)->except(['create', 'edit']);
+        Route::get('question-banks', fn () => redirect()->route('admin.questions.index'))->name('question-banks.index');
         Route::get('question-banks/{questionBank}', [AdminQuestionController::class, 'showBank'])->name('question-banks.show');
         Route::post('question-banks', [AdminQuestionController::class, 'storeBank'])->name('question-banks.store');
         Route::put('question-banks/{questionBank}', [AdminQuestionController::class, 'updateBank'])->name('question-banks.update');
@@ -61,8 +62,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::inertia('people', 'admin/people/index')->name('people.index');
         Route::get('exam-monitoring', AdminExamMonitorController::class)->name('exam-monitoring.index');
         Route::get('audit-logs', [AdminAuditLogController::class, 'index'])->name('audit-logs.index');
-        Route::get('exam-monitoring', AdminExamMonitorController::class)->name('exam-monitoring.index');
-        Route::get('audit-logs', [AdminAuditLogController::class, 'index'])->name('audit-logs.index');
+        Route::delete('audit-logs', [AdminAuditLogController::class, 'purge'])->name('audit-logs.purge');
         Route::get('reports', [AdminReportController::class, 'index'])->name('reports.index');
     });
 
@@ -89,6 +89,7 @@ Route::middleware(['auth', 'verified', 'role:guru'])
         Route::get('questions/{question}', [TeacherQuestionController::class, 'show'])->name('questions.show');
         Route::put('questions/{question}', [TeacherQuestionController::class, 'update'])->name('questions.update');
         Route::delete('questions/{question}', [TeacherQuestionController::class, 'destroy'])->name('questions.destroy');
+        Route::get('question-banks', fn () => redirect()->route('teacher.questions.index'))->name('question-banks.index');
         Route::get('question-banks/{questionBank}', [TeacherQuestionController::class, 'showBank'])->name('question-banks.show');
         Route::post('question-banks', [TeacherQuestionController::class, 'storeBank'])->name('question-banks.store');
         Route::put('question-banks/{questionBank}', [TeacherQuestionController::class, 'updateBank'])->name('question-banks.update');
