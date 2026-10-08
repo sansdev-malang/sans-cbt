@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AuditLogController as AdminAuditLogController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\DatabaseIntegrationController as AdminDatabaseIntegrationController;
 use App\Http\Controllers\Admin\ExamMonitorController as AdminExamMonitorController;
 use App\Http\Controllers\Admin\QuestionController as AdminQuestionController;
 use App\Http\Controllers\Admin\QuestionMediaController as AdminQuestionMediaController;
@@ -64,6 +65,12 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::get('audit-logs', [AdminAuditLogController::class, 'index'])->name('audit-logs.index');
         Route::delete('audit-logs', [AdminAuditLogController::class, 'purge'])->name('audit-logs.purge');
         Route::get('reports', [AdminReportController::class, 'index'])->name('reports.index');
+
+        // Integrasi Database & Unit Sekolah (SD & SMP)
+        Route::get('integrations', [AdminDatabaseIntegrationController::class, 'index'])->name('integrations.index');
+        Route::post('integrations/test', [AdminDatabaseIntegrationController::class, 'testConnection'])->name('integrations.test');
+        Route::get('integrations/preview', [AdminDatabaseIntegrationController::class, 'preview'])->name('integrations.preview');
+        Route::post('integrations/switch-unit', [AdminDatabaseIntegrationController::class, 'switchUnit'])->name('integrations.switch-unit');
     });
 
 // Question media is stored on the private disk and accessible to all authenticated users (admin, teacher, student).

@@ -1,6 +1,7 @@
 import {
     BookOpen,
     ClipboardList,
+    Database,
     GraduationCap,
     LayoutGrid,
     LineChart,
@@ -108,6 +109,16 @@ const adminNavGroups: NavGroup[] = [
                 title: 'Audit Log',
                 href: auditLogsIndex(),
                 icon: ScrollText,
+            },
+        ],
+    },
+    {
+        label: 'Sistem & Integrasi',
+        items: [
+            {
+                title: 'Integrasi Database',
+                href: '/admin/integrations',
+                icon: Database,
             },
         ],
     },
