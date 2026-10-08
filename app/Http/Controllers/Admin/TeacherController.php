@@ -22,19 +22,22 @@ class TeacherController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->value();
+        $unit = $request->string('unit')->trim()->value() ?: 'all';
 
         $teachers = Teacher::query()
             ->with('homeroomClasses:id,name,academic_year,homeroom_teacher_id')
+            ->when($unit !== 'all', fn (Builder $query) => $query->where('unit', $unit))
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(fn (Builder $query) => $query
                     ->where('full_name', 'like', "%{$search}%")
                     ->orWhere('nip', 'like', "%{$search}%"));
             })
             ->orderBy('full_name')
-            ->paginate(10)
+            ->paginate(15)
             ->withQueryString()
             ->through(fn (Teacher $teacher): array => [
                 'id' => $teacher->id,
+                'unit' => $teacher->unit ?? 'sd',
                 'user_id' => $teacher->user_id,
                 'nip' => $teacher->nip,
                 'full_name' => $teacher->full_name,
@@ -42,9 +45,16 @@ class TeacherController extends Controller
                 'homeroom_classes' => $teacher->homeroomClasses->map(fn (SchoolClass $class): string => "{$class->name} ({$class->academic_year})")->all(),
             ]);
 
+        $unitCounts = [
+            'all' => Teacher::count(),
+            'sd' => Teacher::where('unit', 'sd')->count(),
+            'smp' => Teacher::where('unit', 'smp')->count(),
+        ];
+
         return Inertia::render('admin/teachers/index', [
             'teachers' => $teachers,
-            'filters' => ['search' => $search],
+            'filters' => ['search' => $search, 'unit' => $unit],
+            'unitCounts' => $unitCounts,
             'users' => $this->userOptions(),
         ]);
     }
@@ -114,6 +124,7 @@ class TeacherController extends Controller
     private function payload(TeacherRequest|Teacher $source): array
     {
         return [
+            'unit' => $source->unit ?? 'sd',
             'user_id' => $source->user_id ?: null,
             'nip' => $source->nip ?: null,
             'full_name' => $source->full_name,

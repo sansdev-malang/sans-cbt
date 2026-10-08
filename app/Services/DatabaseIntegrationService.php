@@ -227,119 +227,219 @@ class DatabaseIntegrationService
             'teachers_synced' => 0,
             'classes_synced' => 0,
             'students_synced' => 0,
+            'users_synced' => 0,
             'units_processed' => [],
             'errors' => [],
         ];
 
-        foreach ($units as $unit) {
-            try {
-                UnitContext::setUnit($unit);
+        $defaultPassword = \Illuminate\Support\Facades\Hash::make('sans12345');
+
+        DB::beginTransaction();
+        try {
+            $usersLookup = \App\Models\User::pluck('id', 'email')->all();
+            $teachersLookup = \App\Models\Teacher::pluck('id', 'nip')->all();
+            $teachersByName = \App\Models\Teacher::pluck('id', 'full_name')->all();
+            $classesLookup = \App\Models\SchoolClass::get()->keyBy(fn($c) => "{$c->name}_{$c->academic_year}")->all();
+            $studentsLookup = \App\Models\Student::pluck('id', 'nis')->all();
+
+            foreach ($units as $unit) {
+                $conn = UnitContext::getConnection($unit);
                 $info = UnitContext::getUnitInfo($unit);
 
-                // 1. Get active academic year
-                $activeAy = AcademicYear::where('is_active', true)->first()
-                    ?? AcademicYear::orderBy('id', 'desc')->first();
-                $academicYearName = $activeAy?->name ?? '2026/2027';
+                // A. Teachers
+                $masterEmployees = DB::connection($conn)->table('employees')
+                    ->where(fn($q) => $q->where('status', 'Active')->orWhereNull('status'))
+                    ->get();
 
-                // 2. Sync Teachers
-                $masterTeachers = Teacher::where('status', 'Active')->orWhereNull('status')->get();
-                $teacherMap = [];
+                $employeeToTeacherId = [];
 
-                foreach ($masterTeachers as $mt) {
-                    $email = $mt->email ?: (strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $mt->name)) . "_{$unit}@sans.test");
-                    
-                    $user = \App\Models\User::firstOrCreate(
-                        ['email' => $email],
-                        [
-                            'name' => $mt->name,
-                            'password' => 'sans12345',
-                            'role' => \App\Role::Guru,
-                        ]
-                    );
+                foreach ($masterEmployees as $emp) {
+                    $email = !empty($emp->email)
+                        ? strtolower(trim($emp->email))
+                        : (strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $emp->name)) . "_{$unit}@sans.test");
 
-                    $cbtTeacher = \App\Models\Teacher::updateOrCreate(
-                        ['nip' => $mt->nip ?: ($mt->nik ?: "EMP_{$unit}_{$mt->id}")],
-                        [
-                            'user_id' => $user->id,
-                            'full_name' => $mt->name,
-                            'phone' => $mt->phone ?: $mt->mobile_phone,
-                        ]
-                    );
+                    $nip = !empty($emp->nip) ? trim($emp->nip) : (!empty($emp->nik) ? trim($emp->nik) : "EMP_{$unit}_{$emp->id}");
 
-                    $teacherMap[$mt->id] = $cbtTeacher->id;
-                    $summary['teachers_synced']++;
-                }
-
-                // 3. Sync Classrooms
-                $masterClassrooms = Classroom::with(['classLevel', 'academicYear'])->get();
-                $classMap = [];
-
-                foreach ($masterClassrooms as $mc) {
-                    $homeroomId = isset($teacherMap[$mc->homeroom_teacher_id]) 
-                        ? $teacherMap[$mc->homeroom_teacher_id] 
-                        : null;
-
-                    $cbtClass = \App\Models\SchoolClass::updateOrCreate(
-                        [
-                            'name' => $mc->name,
-                            'academic_year' => $mc->academicYear?->name ?? $academicYearName,
-                        ],
-                        [
-                            'level' => $mc->classLevel?->name ?? (strtoupper($unit) . ' ' . substr($mc->name, 0, 1)),
-                            'homeroom_teacher_id' => $homeroomId,
-                        ]
-                    );
-
-                    $classMap[$mc->id] = $cbtClass->id;
-                    $summary['classes_synced']++;
-                }
-
-                // 4. Sync Students
-                $masterStudents = Student::with('classroom')->where('status', 'aktif')->orWhereNull('status')->get();
-
-                foreach ($masterStudents as $ms) {
-                    $studentEmail = $ms->nisn 
-                        ? "{$ms->nisn}@siswa.sans.test" 
-                        : "siswa_{$unit}_{$ms->id}@sans.test";
-
-                    $studentName = $ms->full_name ?: ($ms->name ?: "Siswa {$ms->nis}");
-
-                    $user = \App\Models\User::firstOrCreate(
-                        ['email' => $studentEmail],
-                        [
-                            'name' => $studentName,
-                            'password' => 'sans12345',
-                            'role' => \App\Role::Siswa,
-                        ]
-                    );
-
-                    $cbtStudent = \App\Models\Student::updateOrCreate(
-                        ['nis' => $ms->nis ?: "NIS_{$unit}_{$ms->id}"],
-                        [
-                            'user_id' => $user->id,
-                            'nisn' => $ms->nisn,
-                            'full_name' => $studentName,
-                            'gender' => $ms->gender === 'P' || $ms->gender === 'female' ? 'P' : 'L',
-                            'birth_date' => $ms->birth_date,
-                            'phone' => $ms->phone ?: $ms->parent_phone,
-                            'address' => $ms->address,
-                        ]
-                    );
-
-                    // Assign to class pivot
-                    if ($ms->classroom_id && isset($classMap[$ms->classroom_id])) {
-                        $targetClassId = $classMap[$ms->classroom_id];
-                        $cbtStudent->classes()->syncWithoutDetaching([$targetClassId]);
+                    // User account
+                    if (!isset($usersLookup[$email])) {
+                        $userId = DB::table('users')->insertGetId([
+                            'name' => $emp->name,
+                            'email' => $email,
+                            'password' => $defaultPassword,
+                            'role' => \App\Role::Guru->value,
+                            'unit' => $unit,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        $usersLookup[$email] = $userId;
+                        $summary['users_synced']++;
+                    } else {
+                        $userId = $usersLookup[$email];
+                        DB::table('users')->where('id', $userId)->update(['unit' => $unit]);
                     }
 
-                    $summary['students_synced']++;
+                    // Teacher record
+                    $teacherId = $teachersLookup[$nip] ?? ($teachersByName[$emp->name] ?? null);
+                    if (!$teacherId) {
+                        $teacherId = DB::table('teachers')->insertGetId([
+                            'unit' => $unit,
+                            'user_id' => $userId,
+                            'nip' => $nip,
+                            'full_name' => $emp->name,
+                            'phone' => $emp->phone ?? null,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        $teachersLookup[$nip] = $teacherId;
+                        $teachersByName[$emp->name] = $teacherId;
+                        $summary['teachers_synced']++;
+                    } else {
+                        DB::table('teachers')->where('id', $teacherId)->update([
+                            'unit' => $unit,
+                            'user_id' => $userId,
+                            'full_name' => $emp->name,
+                            'phone' => $emp->phone ?? null,
+                            'updated_at' => now(),
+                        ]);
+                    }
+
+                    $employeeToTeacherId[$emp->id] = $teacherId;
+                }
+
+                // B. Academic Year
+                $activeAy = DB::connection($conn)->table('academic_years')->where('is_active', 1)->first()
+                    ?? DB::connection($conn)->table('academic_years')->orderBy('id', 'desc')->first();
+                $academicYearName = $activeAy->name ?? '2026/2027';
+
+                // C. Classrooms
+                $masterClassrooms = DB::connection($conn)->table('classrooms')->get();
+                $classroomMap = [];
+
+                foreach ($masterClassrooms as $mc) {
+                    $classLevel = DB::connection($conn)->table('class_levels')->where('id', $mc->class_level_id)->first();
+                    $levelName = $classLevel->name ?? (strtoupper($unit) . ' ' . substr($mc->name, 0, 1));
+
+                    $key = "{$mc->name}_{$academicYearName}";
+                    $homeroomId = isset($employeeToTeacherId[$mc->teacher_id ?? $mc->homeroom_teacher_id ?? null])
+                        ? $employeeToTeacherId[$mc->teacher_id ?? $mc->homeroom_teacher_id]
+                        : null;
+
+                    if (!isset($classesLookup[$key])) {
+                        $classId = DB::table('classes')->insertGetId([
+                            'unit' => $unit,
+                            'name' => $mc->name,
+                            'level' => $levelName,
+                            'academic_year' => $academicYearName,
+                            'homeroom_teacher_id' => $homeroomId,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        $classesLookup[$key] = (object)['id' => $classId];
+                        $summary['classes_synced']++;
+                    } else {
+                        $classId = $classesLookup[$key]->id;
+                        DB::table('classes')->where('id', $classId)->update([
+                            'unit' => $unit,
+                            'level' => $levelName,
+                            'homeroom_teacher_id' => $homeroomId,
+                            'updated_at' => now(),
+                        ]);
+                    }
+
+                    $classroomMap[$mc->id] = $classId;
+                }
+
+                // D. Students
+                $masterStudents = DB::connection($conn)->table('students')
+                    ->where(fn($q) => $q->where('status', 'aktif')->orWhereNull('status'))
+                    ->get();
+
+                $studentClassPivot = [];
+
+                foreach ($masterStudents as $ms) {
+                    $studentEmail = !empty($ms->nisn)
+                        ? "{$ms->nisn}@siswa.sans.test"
+                        : "siswa_{$unit}_{$ms->id}@sans.test";
+
+                    $studentName = !empty($ms->full_name) ? $ms->full_name : (!empty($ms->name) ? $ms->name : "Siswa {$ms->nis}");
+                    $nis = !empty($ms->nis) ? trim($ms->nis) : "NIS_{$unit}_{$ms->id}";
+
+                    // User account for student
+                    if (!isset($usersLookup[$studentEmail])) {
+                        $userId = DB::table('users')->insertGetId([
+                            'name' => $studentName,
+                            'email' => $studentEmail,
+                            'password' => $defaultPassword,
+                            'role' => \App\Role::Siswa->value,
+                            'unit' => $unit,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        $usersLookup[$studentEmail] = $userId;
+                        $summary['users_synced']++;
+                    } else {
+                        $userId = $usersLookup[$studentEmail];
+                        DB::table('users')->where('id', $userId)->update(['unit' => $unit]);
+                    }
+
+                    // Student record
+                    $gender = in_array(strtoupper((string)($ms->gender ?? '')), ['P', 'FEMALE']) ? 'P' : 'L';
+
+                    if (!isset($studentsLookup[$nis])) {
+                        $studentId = DB::table('students')->insertGetId([
+                            'unit' => $unit,
+                            'user_id' => $userId,
+                            'nis' => $nis,
+                            'nisn' => $ms->nisn ?? null,
+                            'full_name' => $studentName,
+                            'gender' => $gender,
+                            'birth_date' => $ms->birth_date ?? null,
+                            'phone' => $ms->phone ?? ($ms->parent_phone ?? null),
+                            'address' => $ms->address ?? null,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        $studentsLookup[$nis] = $studentId;
+                        $summary['students_synced']++;
+                    } else {
+                        $studentId = $studentsLookup[$nis];
+                        DB::table('students')->where('id', $studentId)->update([
+                            'unit' => $unit,
+                            'user_id' => $userId,
+                            'nisn' => $ms->nisn ?? null,
+                            'full_name' => $studentName,
+                            'gender' => $gender,
+                            'birth_date' => $ms->birth_date ?? null,
+                            'phone' => $ms->phone ?? ($ms->parent_phone ?? null),
+                            'address' => $ms->address ?? null,
+                            'updated_at' => now(),
+                        ]);
+                    }
+
+                    if (!empty($ms->classroom_id) && isset($classroomMap[$ms->classroom_id])) {
+                        $targetClassId = $classroomMap[$ms->classroom_id];
+                        $studentClassPivot[] = [
+                            'class_id' => $targetClassId,
+                            'student_id' => $studentId,
+                        ];
+                    }
+                }
+
+                // Batch sync pivots
+                if (!empty($studentClassPivot)) {
+                    foreach (array_chunk($studentClassPivot, 200) as $chunk) {
+                        DB::table('class_students')->insertOrIgnore($chunk);
+                    }
                 }
 
                 $summary['units_processed'][] = $info['name'];
-            } catch (\Throwable $e) {
-                Log::error("[Database Integration] Error syncing unit {$unit}: " . $e->getMessage());
-                $summary['errors'][] = "Unit {$unit}: " . $e->getMessage();
             }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("[Database Integration] Error syncing master data: " . $e->getMessage());
+            $summary['errors'][] = $e->getMessage();
         }
 
         return $summary;

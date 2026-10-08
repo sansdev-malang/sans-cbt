@@ -11,6 +11,7 @@ import { index } from '@/routes/admin/students';
 type Option = { value: number; label: string };
 type Student = {
     id?: number;
+    unit?: 'sd' | 'smp' | string;
     user_id: number | null;
     nis: string;
     nisn: string | null;
@@ -48,6 +49,19 @@ export function StudentForm({
                 >
                     {({ processing, errors }): ReactNode => (
                         <>
+                            <div className="grid gap-2">
+                                <Label htmlFor="student-unit">Unit Sekolah</Label>
+                                <select
+                                    id="student-unit"
+                                    name="unit"
+                                    defaultValue={student.unit ?? 'sd'}
+                                    className="h-9 rounded-md border border-input bg-transparent px-3 text-sm font-medium"
+                                >
+                                    <option value="sd">Unit SD</option>
+                                    <option value="smp">Unit SMP</option>
+                                </select>
+                                <InputError message={errors.unit} />
+                            </div>
                             <Field
                                 label="Nama lengkap"
                                 name="full_name"

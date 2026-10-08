@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 
 type User = {
     id: number;
+    unit?: 'sd' | 'smp' | string;
     name: string;
     email: string;
     role: string | null;
@@ -43,7 +44,7 @@ export function UserFormDialog({
                     <DialogDescription>
                         {isEditing
                             ? 'Kosongkan kata sandi bila tidak ingin mengubahnya.'
-                            : 'Buat akun dan pilih peran pengguna.'}
+                            : 'Pilih unit sekolah, buat akun dan tentukan peran pengguna.'}
                     </DialogDescription>
                 </DialogHeader>
                 <Form
@@ -56,6 +57,19 @@ export function UserFormDialog({
                 >
                     {({ processing, errors }) => (
                         <>
+                            <div className="grid gap-2">
+                                <Label htmlFor="user-unit">Unit Sekolah</Label>
+                                <select
+                                    id="user-unit"
+                                    name="unit"
+                                    defaultValue={user?.unit ?? 'sd'}
+                                    className="h-9 rounded-md border border-input bg-transparent px-3 text-sm font-medium"
+                                >
+                                    <option value="sd">Unit SD</option>
+                                    <option value="smp">Unit SMP</option>
+                                </select>
+                                <InputError message={errors.unit} />
+                            </div>
                             <Field
                                 id="user-name"
                                 label="Nama"

@@ -4,6 +4,8 @@ import TeacherController from '@/actions/App/Http/Controllers/Admin/TeacherContr
 import { DeleteConfirmationDialog } from '@/components/admin/delete-confirmation-dialog';
 import { TeacherFormDialog } from '@/components/admin/teacher-form-dialog';
 import { AdminPagination } from '@/components/admin/admin-pagination';
+import { UnitBadge } from '@/components/admin/unit-badge';
+import { UnitFilterTabs } from '@/components/admin/unit-filter-tabs';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -13,6 +15,7 @@ import { index } from '@/routes/admin/teachers';
 
 type Teacher = {
     id: number;
+    unit?: 'sd' | 'smp' | string;
     user_id: number | null;
     nip: string | null;
     full_name: string;
@@ -32,13 +35,16 @@ type Paginator<T> = {
 export default function AdminTeachersIndex({
     teachers,
     filters,
+    unitCounts,
     users,
 }: {
     teachers: Paginator<Teacher>;
-    filters: { search: string };
+    filters: { search: string; unit?: string };
+    unitCounts?: { all?: number; sd?: number; smp?: number };
     users: Option[];
 }) {
     const [search, setSearch] = useState(filters.search);
+    const activeUnit = filters.unit || 'all';
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(
         null,
@@ -46,11 +52,20 @@ export default function AdminTeachersIndex({
     const [teacherToDelete, setTeacherToDelete] = useState<Teacher | null>(
         null,
     );
+
+    const handleUnitChange = (unit: 'all' | 'sd' | 'smp') => {
+        router.get(
+            index().url,
+            { search, unit },
+            { preserveState: true, preserveScroll: true, replace: true },
+        );
+    };
+
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         router.get(
             index().url,
-            { search },
+            { search, unit: activeUnit },
             { preserveState: true, preserveScroll: true, replace: true },
         );
     };
@@ -77,15 +92,20 @@ export default function AdminTeachersIndex({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <Heading
                         title="Kelola Guru"
-                        description="Data guru, NIP, akun login, dan penugasan wali kelas."
+                        description="Data guru, NIP, unit sekolah, dan penugasan wali kelas."
                     />
                     <Button onClick={openCreateDialog}>Tambah Guru</Button>
                 </div>
                 <Card>
-                    <CardHeader>
+                    <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <UnitFilterTabs
+                            activeUnit={activeUnit}
+                            counts={unitCounts}
+                            onChange={handleUnitChange}
+                        />
                         <form
                             onSubmit={submit}
-                            className="flex w-full max-w-md gap-2"
+                            className="flex w-full max-w-sm gap-2"
                         >
                             <Input
                                 type="search"
@@ -103,69 +123,99 @@ export default function AdminTeachersIndex({
                     <CardContent className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b text-left text-xs uppercase">
-                                    <th className="py-2 pr-4 font-medium">
+                                <tr className="border-b text-left text-xs uppercase text-muted-foreground">
+                                    <th className="py-2.5 pr-4 font-medium">
+                                        Unit
+                                    </th>
+                                    <th className="py-2.5 pr-4 font-medium">
                                         Guru
                                     </th>
-                                    <th className="py-2 pr-4 font-medium">
+                                    <th className="py-2.5 pr-4 font-medium">
                                         NIP
                                     </th>
-                                    <th className="py-2 pr-4 font-medium">
+                                    <th className="py-2.5 pr-4 font-medium">
                                         Wali Kelas
                                     </th>
-                                    <th className="py-2 text-right font-medium">
+                                    <th className="py-2.5 text-right font-medium">
                                         Aksi
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {teachers.data.map((teacher) => (
-                                    <tr
-                                        key={teacher.id}
-                                        className="border-b last:border-0"
-                                    >
-                                        <td className="py-3 pr-4 font-medium">
-                                            {teacher.full_name}
-                                            {teacher.phone && (
-                                                <span className="block text-muted-foreground">
-                                                    {teacher.phone}
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="py-3 pr-4">
-                                            {teacher.nip ?? '-'}
-                                        </td>
-                                        <td className="py-3 pr-4">
-                                            {teacher.homeroom_classes.join(
-                                                ', ',
-                                            ) || '-'}
-                                        </td>
-                                        <td className="py-3 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        openEditDialog(teacher)
-                                                    }
-                                                >
-                                                    Ubah
-                                                </Button>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        setTeacherToDelete(
-                                                            teacher,
-                                                        )
-                                                    }
-                                                >
-                                                    Hapus
-                                                </Button>
-                                            </div>
+                                {teachers.data.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={5}
+                                            className="py-8 text-center text-muted-foreground"
+                                        >
+                                            Tidak ada data guru ditemukan.
                                         </td>
                                     </tr>
-                                ))}
+                                ) : (
+                                    teachers.data.map((teacher) => (
+                                        <tr
+                                            key={teacher.id}
+                                            className="border-b last:border-0 hover:bg-muted/40 transition-colors"
+                                        >
+                                            <td className="py-3 pr-4">
+                                                <UnitBadge unit={teacher.unit} />
+                                            </td>
+                                            <td className="py-3 pr-4 font-medium">
+                                                <div className="font-semibold text-foreground">
+                                                    {teacher.full_name}
+                                                </div>
+                                                {teacher.phone && (
+                                                    <span className="block text-xs text-muted-foreground">
+                                                        {teacher.phone}
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="py-3 pr-4 text-muted-foreground font-mono text-xs">
+                                                {teacher.nip ?? '-'}
+                                            </td>
+                                            <td className="py-3 pr-4">
+                                                {teacher.homeroom_classes.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {teacher.homeroom_classes.map((cls, i) => (
+                                                            <span
+                                                                key={i}
+                                                                className="rounded bg-muted px-2 py-0.5 text-xs text-foreground"
+                                                            >
+                                                                {cls}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-muted-foreground">-</span>
+                                                )}
+                                            </td>
+                                            <td className="py-3 text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            openEditDialog(teacher)
+                                                        }
+                                                    >
+                                                        Ubah
+                                                    </Button>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            setTeacherToDelete(
+                                                                teacher,
+                                                            )
+                                                        }
+                                                    >
+                                                        Hapus
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                         <AdminPagination
@@ -174,7 +224,7 @@ export default function AdminTeachersIndex({
                             onPageChange={(page) =>
                                 router.get(
                                     index().url,
-                                    { search, page },
+                                    { search, unit: activeUnit, page },
                                     {
                                         preserveState: true,
                                         preserveScroll: true,

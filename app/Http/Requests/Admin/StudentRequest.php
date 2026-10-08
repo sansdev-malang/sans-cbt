@@ -29,6 +29,7 @@ class StudentRequest extends FormRequest
         $studentId = $student instanceof Student ? $student->id : null;
 
         return [
+            'unit' => ['nullable', 'string', 'in:sd,smp'],
             'user_id' => ['nullable', Rule::exists('users', 'id')->where('role', Role::Siswa->value), Rule::unique('students', 'user_id')->ignore($studentId)],
             'nis' => ['required', 'string', 'max:50', Rule::unique('students', 'nis')->ignore($studentId)],
             'nisn' => ['nullable', 'string', 'max:50', Rule::unique('students', 'nisn')->ignore($studentId)],

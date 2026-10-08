@@ -20,8 +20,10 @@ class UserController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->value();
+        $unit = $request->string('unit')->trim()->value() ?: 'all';
 
         $users = User::query()
+            ->when($unit !== 'all', fn (Builder $query) => $query->where('unit', $unit))
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $query) use ($search): void {
                     $query->where('name', 'like', "%{$search}%")
@@ -30,10 +32,11 @@ class UserController extends Controller
             })
             ->orderBy('name')
             ->orderBy('id')
-            ->paginate(10)
+            ->paginate(15)
             ->withQueryString()
             ->through(fn (User $user): array => [
                 'id' => $user->id,
+                'unit' => $user->unit ?? 'sd',
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role?->value,
@@ -42,18 +45,29 @@ class UserController extends Controller
                 'created_at' => $user->created_at?->toIso8601String(),
             ]);
 
+        $unitCounts = [
+            'all' => User::count(),
+            'sd' => User::where('unit', 'sd')->count(),
+            'smp' => User::where('unit', 'smp')->count(),
+        ];
+
         return Inertia::render('admin/users/index', [
             'users' => $users,
             'roles' => Role::options(),
+            'unitCounts' => $unitCounts,
             'filters' => [
                 'search' => $search,
+                'unit' => $unit,
             ],
         ]);
     }
 
     public function store(ManagedUserRequest $request): RedirectResponse
     {
-        User::query()->create($request->safe()->only(['name', 'email', 'role', 'password']));
+        $payload = $request->safe()->only(['name', 'email', 'role', 'password']);
+        $payload['unit'] = $request->input('unit', 'sd');
+
+        User::query()->create($payload);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Akun pengguna berhasil ditambahkan.']);
 
@@ -65,6 +79,9 @@ class UserController extends Controller
         abort_if($request->user()?->is($user), 403);
 
         $attributes = $request->safe()->only(['name', 'email', 'role']);
+        if ($request->filled('unit')) {
+            $attributes['unit'] = $request->input('unit');
+        }
 
         if ($request->filled('password')) {
             $attributes['password'] = $request->string('password')->value();

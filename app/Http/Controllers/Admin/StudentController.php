@@ -23,9 +23,13 @@ class StudentController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->value();
+        $unit = $request->string('unit')->trim()->value() ?: 'all';
+        $classId = $request->integer('class_id');
 
         $students = Student::query()
             ->with('classes:id,name,academic_year')
+            ->when($unit !== 'all', fn (Builder $query) => $query->where('unit', $unit))
+            ->when($classId > 0, fn (Builder $query) => $query->whereHas('classes', fn ($q) => $q->where('classes.id', $classId)))
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(fn (Builder $query) => $query
                     ->where('full_name', 'like', "%{$search}%")
@@ -33,10 +37,11 @@ class StudentController extends Controller
                     ->orWhere('nisn', 'like', "%{$search}%"));
             })
             ->orderBy('full_name')
-            ->paginate(10)
+            ->paginate(15)
             ->withQueryString()
             ->through(fn (Student $student): array => [
                 'id' => $student->id,
+                'unit' => $student->unit ?? 'sd',
                 'nis' => $student->nis,
                 'nisn' => $student->nisn,
                 'full_name' => $student->full_name,
@@ -49,9 +54,16 @@ class StudentController extends Controller
                 'classes' => $student->classes->map(fn (SchoolClass $class): string => "{$class->name} ({$class->academic_year})")->all(),
             ]);
 
+        $unitCounts = [
+            'all' => Student::count(),
+            'sd' => Student::where('unit', 'sd')->count(),
+            'smp' => Student::where('unit', 'smp')->count(),
+        ];
+
         return Inertia::render('admin/students/index', [
             'students' => $students,
-            'filters' => ['search' => $search],
+            'filters' => ['search' => $search, 'unit' => $unit, 'class_id' => $classId ?: null],
+            'unitCounts' => $unitCounts,
             ...$this->formOptions(),
         ]);
     }
@@ -134,6 +146,7 @@ class StudentController extends Controller
     private function payload(StudentRequest|Student $source): array
     {
         return [
+            'unit' => $source->unit ?? 'sd',
             'user_id' => $source->user_id ?: null,
             'nis' => $source->nis,
             'nisn' => $source->nisn ?: null,

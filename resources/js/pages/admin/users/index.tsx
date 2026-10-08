@@ -4,6 +4,8 @@ import { useState } from 'react';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import { DeleteConfirmationDialog } from '@/components/admin/delete-confirmation-dialog';
 import { UserFormDialog } from '@/components/admin/user-form-dialog';
+import { UnitBadge } from '@/components/admin/unit-badge';
+import { UnitFilterTabs } from '@/components/admin/unit-filter-tabs';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -13,6 +15,7 @@ import { index as usersIndex } from '@/routes/admin/users';
 
 type AdminUser = {
     id: number;
+    unit?: 'sd' | 'smp' | string;
     name: string;
     email: string;
     role: string | null;
@@ -35,22 +38,33 @@ type Props = {
     users: Paginator<AdminUser>;
     filters: {
         search: string;
+        unit?: string;
     };
+    unitCounts?: { all?: number; sd?: number; smp?: number };
     roles: { value: string; label: string }[];
 };
 
-export default function AdminUsersIndex({ users, filters, roles }: Props) {
+export default function AdminUsersIndex({ users, filters, unitCounts, roles }: Props) {
     const [search, setSearch] = useState(filters.search);
+    const activeUnit = filters.unit || 'all';
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
     const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null);
+
+    const handleUnitChange = (unit: 'all' | 'sd' | 'smp') => {
+        router.get(
+            usersIndex().url,
+            { search, unit },
+            { preserveState: true, preserveScroll: true, replace: true },
+        );
+    };
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
         router.get(
             usersIndex().url,
-            { search },
+            { search, unit: activeUnit },
             { preserveState: true, preserveScroll: true, replace: true },
         );
     };
@@ -58,7 +72,7 @@ export default function AdminUsersIndex({ users, filters, roles }: Props) {
     const goToPage = (page: number) => {
         router.get(
             usersIndex().url,
-            { search, page },
+            { search, unit: activeUnit, page },
             { preserveState: true, preserveScroll: true },
         );
     };
@@ -88,16 +102,21 @@ export default function AdminUsersIndex({ users, filters, roles }: Props) {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <Heading
                         title="Kelola Pengguna"
-                        description="Daftar akun Admin, Guru, Siswa, dan Orang Tua."
+                        description="Daftar akun Admin, Guru, Siswa, dan Orang Tua untuk unit SD dan SMP."
                     />
                     <Button onClick={openCreateDialog}>Tambah Pengguna</Button>
                 </div>
 
                 <Card>
-                    <CardHeader>
+                    <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <UnitFilterTabs
+                            activeUnit={activeUnit}
+                            counts={unitCounts}
+                            onChange={handleUnitChange}
+                        />
                         <form
                             onSubmit={submit}
-                            className="flex w-full max-w-md items-center gap-2"
+                            className="flex w-full max-w-sm items-center gap-2"
                         >
                             <Input
                                 type="search"
@@ -118,19 +137,22 @@ export default function AdminUsersIndex({ users, filters, roles }: Props) {
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-border text-left text-xs text-muted-foreground uppercase">
-                                    <th className="py-2 pr-4 font-medium">
+                                    <th className="py-2.5 pr-4 font-medium">
+                                        Unit
+                                    </th>
+                                    <th className="py-2.5 pr-4 font-medium">
                                         Nama
                                     </th>
-                                    <th className="py-2 pr-4 font-medium">
+                                    <th className="py-2.5 pr-4 font-medium">
                                         Email
                                     </th>
-                                    <th className="py-2 pr-4 font-medium">
+                                    <th className="py-2.5 pr-4 font-medium">
                                         Peran
                                     </th>
-                                    <th className="py-2 pr-4 font-medium">
+                                    <th className="py-2.5 pr-4 font-medium">
                                         Status
                                     </th>
-                                    <th className="py-2 text-right font-medium">
+                                    <th className="py-2.5 text-right font-medium">
                                         Aksi
                                     </th>
                                 </tr>
@@ -139,9 +161,12 @@ export default function AdminUsersIndex({ users, filters, roles }: Props) {
                                 {users.data.map((user) => (
                                     <tr
                                         key={user.id}
-                                        className="border-b border-border/60 last:border-0"
+                                        className="border-b border-border/60 last:border-0 hover:bg-muted/40 transition-colors"
                                     >
-                                        <td className="py-3 pr-4 font-medium">
+                                        <td className="py-3 pr-4">
+                                            <UnitBadge unit={user.unit} />
+                                        </td>
+                                        <td className="py-3 pr-4 font-medium text-foreground">
                                             {user.name}
                                         </td>
                                         <td className="py-3 pr-4 text-muted-foreground">
@@ -152,7 +177,7 @@ export default function AdminUsersIndex({ users, filters, roles }: Props) {
                                                 {user.role_label}
                                             </span>
                                         </td>
-                                        <td className="py-3 pr-4 text-muted-foreground">
+                                        <td className="py-3 pr-4 text-muted-foreground text-xs">
                                             {user.email_verified_at
                                                 ? 'Terverifikasi'
                                                 : 'Belum verifikasi'}
@@ -185,7 +210,7 @@ export default function AdminUsersIndex({ users, filters, roles }: Props) {
                                 {users.data.length === 0 && (
                                     <tr>
                                         <td
-                                            colSpan={5}
+                                            colSpan={6}
                                             className="py-8 text-center text-muted-foreground"
                                         >
                                             Tidak ada pengguna yang cocok dengan

@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 
 type SchoolClass = {
     id: number;
+    unit?: 'sd' | 'smp' | string;
     name: string;
     level: string | null;
     academic_year: string;
@@ -41,7 +42,7 @@ export function SchoolClassFormDialog({
                         {isEditing ? 'Ubah Kelas' : 'Tambah Kelas'}
                     </DialogTitle>
                     <DialogDescription>
-                        Isi nama, tahun ajaran, dan wali kelas.
+                        Pilih unit sekolah, isi nama kelas, tahun ajaran, dan wali kelas.
                     </DialogDescription>
                 </DialogHeader>
                 <Form
@@ -54,9 +55,22 @@ export function SchoolClassFormDialog({
                 >
                     {({ processing, errors }) => (
                         <>
+                            <div className="grid gap-2">
+                                <Label htmlFor="class-unit">Unit Sekolah</Label>
+                                <select
+                                    id="class-unit"
+                                    name="unit"
+                                    defaultValue={schoolClass?.unit ?? 'sd'}
+                                    className="h-9 rounded-md border border-input bg-transparent px-3 text-sm font-medium"
+                                >
+                                    <option value="sd">Unit SD</option>
+                                    <option value="smp">Unit SMP</option>
+                                </select>
+                                <InputError message={errors.unit} />
+                            </div>
                             <Field
                                 id="class-name"
-                                label="Nama"
+                                label="Nama Kelas"
                                 name="name"
                                 required
                                 defaultValue={schoolClass?.name ?? ''}

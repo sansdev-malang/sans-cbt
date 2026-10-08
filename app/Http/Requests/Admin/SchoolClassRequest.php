@@ -21,12 +21,14 @@ class SchoolClassRequest extends FormRequest
         $academicYear = (string) $this->input('academic_year');
 
         return [
+            'unit' => ['nullable', 'string', 'in:sd,smp'],
             'name' => [
                 'required',
                 'string',
                 'max:50',
                 Rule::unique('classes', 'name')
                     ->where('academic_year', $academicYear)
+                    ->where('unit', (string) $this->input('unit', 'sd'))
                     ->ignore($classId),
             ],
             'level' => ['nullable', 'string', 'max:20'],

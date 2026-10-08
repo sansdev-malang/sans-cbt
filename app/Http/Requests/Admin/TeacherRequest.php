@@ -29,6 +29,7 @@ class TeacherRequest extends FormRequest
         $teacherId = $teacher instanceof Teacher ? $teacher->id : null;
 
         return [
+            'unit' => ['nullable', 'string', 'in:sd,smp'],
             'user_id' => ['nullable', Rule::exists('users', 'id')->where('role', Role::Guru->value), Rule::unique('teachers', 'user_id')->ignore($teacherId)],
             'nip' => ['nullable', 'string', 'max:50', Rule::unique('teachers', 'nip')->ignore($teacherId)],
             'full_name' => ['required', 'string', 'max:255'],

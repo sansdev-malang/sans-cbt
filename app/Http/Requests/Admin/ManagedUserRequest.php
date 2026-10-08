@@ -36,6 +36,7 @@ class ManagedUserRequest extends FormRequest
             : ['nullable', 'string', Password::default(), 'confirmed'];
 
         return [
+            'unit' => ['nullable', 'string', 'in:sd,smp'],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
             'role' => ['required', Rule::enum(Role::class)],

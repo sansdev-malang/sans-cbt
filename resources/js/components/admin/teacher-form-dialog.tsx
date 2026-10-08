@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 
 type Teacher = {
     id: number;
+    unit?: 'sd' | 'smp' | string;
     user_id: number | null;
     nip: string | null;
     full_name: string;
@@ -41,7 +42,7 @@ export function TeacherFormDialog({
                         {isEditing ? 'Ubah Guru' : 'Tambah Guru'}
                     </DialogTitle>
                     <DialogDescription>
-                        Hubungkan akun Guru bila akun login sudah dibuat.
+                        Pilih unit sekolah dan hubungkan akun Guru bila sudah dibuat.
                     </DialogDescription>
                 </DialogHeader>
                 <Form
@@ -54,6 +55,19 @@ export function TeacherFormDialog({
                 >
                     {({ processing, errors }) => (
                         <>
+                            <div className="grid gap-2">
+                                <Label htmlFor="teacher-unit">Unit Sekolah</Label>
+                                <select
+                                    id="teacher-unit"
+                                    name="unit"
+                                    defaultValue={teacher?.unit ?? 'sd'}
+                                    className="h-9 rounded-md border border-input bg-transparent px-3 text-sm font-medium"
+                                >
+                                    <option value="sd">Unit SD</option>
+                                    <option value="smp">Unit SMP</option>
+                                </select>
+                                <InputError message={errors.unit} />
+                            </div>
                             <Field
                                 id="teacher-name"
                                 label="Nama lengkap"

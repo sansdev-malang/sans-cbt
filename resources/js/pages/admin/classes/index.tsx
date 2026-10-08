@@ -4,6 +4,8 @@ import SchoolClassController from '@/actions/App/Http/Controllers/Admin/SchoolCl
 import { AdminPagination } from '@/components/admin/admin-pagination';
 import { DeleteConfirmationDialog } from '@/components/admin/delete-confirmation-dialog';
 import { SchoolClassFormDialog } from '@/components/admin/school-class-form-dialog';
+import { UnitBadge } from '@/components/admin/unit-badge';
+import { UnitFilterTabs } from '@/components/admin/unit-filter-tabs';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -13,6 +15,7 @@ import { index as classesIndex } from '@/routes/admin/classes';
 
 type AdminSchoolClass = {
     id: number;
+    unit?: 'sd' | 'smp' | string;
     name: string;
     level: string | null;
     academic_year: string;
@@ -33,13 +36,16 @@ type Paginator<T> = {
 export default function AdminClassesIndex({
     classes,
     filters,
+    unitCounts,
     teachers,
 }: {
     classes: Paginator<AdminSchoolClass>;
-    filters: { search: string };
+    filters: { search: string; unit?: string };
+    unitCounts?: { all?: number; sd?: number; smp?: number };
     teachers: { value: number; label: string }[];
 }) {
     const [search, setSearch] = useState(filters.search);
+    const activeUnit = filters.unit || 'all';
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState<AdminSchoolClass | null>(
         null,
@@ -48,11 +54,19 @@ export default function AdminClassesIndex({
         null,
     );
 
+    const handleUnitChange = (unit: 'all' | 'sd' | 'smp') => {
+        router.get(
+            classesIndex().url,
+            { search, unit },
+            { preserveState: true, preserveScroll: true, replace: true },
+        );
+    };
+
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         router.get(
             classesIndex().url,
-            { search },
+            { search, unit: activeUnit },
             { preserveState: true, preserveScroll: true, replace: true },
         );
     };
@@ -60,7 +74,7 @@ export default function AdminClassesIndex({
     const goToPage = (page: number) => {
         router.get(
             classesIndex().url,
-            { search, page },
+            { search, unit: activeUnit, page },
             { preserveState: true, preserveScroll: true },
         );
     };
@@ -89,15 +103,20 @@ export default function AdminClassesIndex({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <Heading
                         title="Kelola Kelas"
-                        description="Daftar rombel untuk peserta ujian."
+                        description="Daftar rombel peserta ujian untuk unit SD dan SMP."
                     />
-                    <Button onClick={openCreateDialog}>Tambah</Button>
+                    <Button onClick={openCreateDialog}>Tambah Kelas</Button>
                 </div>
                 <Card>
-                    <CardHeader>
+                    <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <UnitFilterTabs
+                            activeUnit={activeUnit}
+                            counts={unitCounts}
+                            onChange={handleUnitChange}
+                        />
                         <form
                             onSubmit={submit}
-                            className="flex w-full max-w-md gap-2"
+                            className="flex w-full max-w-sm gap-2"
                         >
                             <Input
                                 type="search"
@@ -113,60 +132,91 @@ export default function AdminClassesIndex({
                     <CardContent className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b text-left text-xs uppercase">
-                                    <th className="py-2 pr-4 font-medium">
+                                <tr className="border-b text-left text-xs uppercase text-muted-foreground">
+                                    <th className="py-2.5 pr-4 font-medium">
+                                        Unit
+                                    </th>
+                                    <th className="py-2.5 pr-4 font-medium">
                                         Kelas
                                     </th>
-                                    <th className="py-2 pr-4 font-medium">
+                                    <th className="py-2.5 pr-4 font-medium">
+                                        Tingkat
+                                    </th>
+                                    <th className="py-2.5 pr-4 font-medium">
                                         Tahun Ajaran
                                     </th>
-                                    <th className="py-2 pr-4 font-medium">
+                                    <th className="py-2.5 pr-4 font-medium">
                                         Wali Kelas
                                     </th>
-                                    <th className="py-2 text-right font-medium">
+                                    <th className="py-2.5 pr-4 font-medium">
+                                        Siswa
+                                    </th>
+                                    <th className="py-2.5 text-right font-medium">
                                         Aksi
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {classes.data.map((item) => (
-                                    <tr
-                                        key={item.id}
-                                        className="border-b last:border-0"
-                                    >
-                                        <td className="py-3 pr-4 font-medium">
-                                            {item.name}
-                                        </td>
-                                        <td className="py-3 pr-4">
-                                            {item.academic_year}
-                                        </td>
-                                        <td className="py-3 pr-4">
-                                            {item.homeroom_teacher ?? '-'}
-                                        </td>
-                                        <td className="py-3 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        openEditDialog(item)
-                                                    }
-                                                >
-                                                    Ubah
-                                                </Button>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        setClassToDelete(item)
-                                                    }
-                                                >
-                                                    Hapus
-                                                </Button>
-                                            </div>
+                                {classes.data.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={7}
+                                            className="py-8 text-center text-muted-foreground"
+                                        >
+                                            Tidak ada data kelas ditemukan.
                                         </td>
                                     </tr>
-                                ))}
+                                ) : (
+                                    classes.data.map((item) => (
+                                        <tr
+                                            key={item.id}
+                                            className="border-b last:border-0 hover:bg-muted/40 transition-colors"
+                                        >
+                                            <td className="py-3 pr-4">
+                                                <UnitBadge unit={item.unit} />
+                                            </td>
+                                            <td className="py-3 pr-4 font-medium text-foreground">
+                                                {item.name}
+                                            </td>
+                                            <td className="py-3 pr-4 text-muted-foreground">
+                                                {item.level ?? '-'}
+                                            </td>
+                                            <td className="py-3 pr-4 text-muted-foreground">
+                                                {item.academic_year}
+                                            </td>
+                                            <td className="py-3 pr-4 text-muted-foreground">
+                                                {item.homeroom_teacher ?? '-'}
+                                            </td>
+                                            <td className="py-3 pr-4">
+                                                <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium">
+                                                    {item.students_count} siswa
+                                                </span>
+                                            </td>
+                                            <td className="py-3 text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            openEditDialog(item)
+                                                        }
+                                                    >
+                                                        Ubah
+                                                    </Button>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            setClassToDelete(item)
+                                                        }
+                                                    >
+                                                        Hapus
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                         <AdminPagination

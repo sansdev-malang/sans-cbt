@@ -20,22 +20,26 @@ class SchoolClassController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->value();
+        $unit = $request->string('unit')->trim()->value() ?: 'all';
 
         $classes = SchoolClass::query()
             ->with('homeroomTeacher:id,full_name')
             ->withCount('students')
+            ->when($unit !== 'all', fn (Builder $query) => $query->where('unit', $unit))
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $query) use ($search): void {
                     $query->where('name', 'like', "%{$search}%")
-                        ->orWhere('academic_year', 'like', "%{$search}%");
+                        ->orWhere('academic_year', 'like', "%{$search}%")
+                        ->orWhere('level', 'like', "%{$search}%");
                 });
             })
-            ->orderByDesc('academic_year')
+            ->orderBy('level')
             ->orderBy('name')
-            ->paginate(10)
+            ->paginate(15)
             ->withQueryString()
             ->through(fn (SchoolClass $class): array => [
                 'id' => $class->id,
+                'unit' => $class->unit ?? 'sd',
                 'name' => $class->name,
                 'level' => $class->level,
                 'academic_year' => $class->academic_year,
@@ -44,11 +48,19 @@ class SchoolClassController extends Controller
                 'students_count' => (int) $class->getAttribute('students_count'),
             ]);
 
+        $unitCounts = [
+            'all' => SchoolClass::count(),
+            'sd' => SchoolClass::where('unit', 'sd')->count(),
+            'smp' => SchoolClass::where('unit', 'smp')->count(),
+        ];
+
         return Inertia::render('admin/classes/index', [
             'classes' => $classes,
             'teachers' => $this->teacherOptions(),
+            'unitCounts' => $unitCounts,
             'filters' => [
                 'search' => $search,
+                'unit' => $unit,
             ],
         ]);
     }
@@ -150,6 +162,7 @@ class SchoolClassController extends Controller
     private function payload(SchoolClassRequest $request): array
     {
         return [
+            'unit' => $request->filled('unit') ? $request->string('unit')->trim()->value() : 'sd',
             'name' => $request->string('name')->trim()->value(),
             'level' => $request->filled('level')
                 ? $request->string('level')->trim()->value()

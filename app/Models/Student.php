@@ -24,7 +24,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read User|null $user
  */
-#[Fillable(['user_id', 'nis', 'nisn', 'full_name', 'gender', 'birth_date', 'phone', 'address'])]
+#[Fillable(['unit', 'user_id', 'nis', 'nisn', 'full_name', 'gender', 'birth_date', 'phone', 'address'])]
 class Student extends Model
 {
     /** @use HasFactory<StudentFactory> */
