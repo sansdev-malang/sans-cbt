@@ -1,5 +1,5 @@
 import { Head, router } from "@inertiajs/react";
-import { Trash2 } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { AdminPagination } from "@/components/admin/admin-pagination";
 import Heading from "@/components/heading";
@@ -170,7 +170,8 @@ export default function AdminAuditLogsIndex({
 
                                 {/* Warning message */}
                                 <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
-                                    ⚠️ {purgeDescription} Tindakan ini{" "}
+                                    <AlertTriangle className="mr-2 inline-block h-4 w-4" />
+                                    {purgeDescription} Tindakan ini{" "}
                                     <strong>tidak dapat dibatalkan</strong>.
                                 </div>
                             </div>

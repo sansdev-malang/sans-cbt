@@ -1,27 +1,27 @@
-import { Head, Link, router } from "@inertiajs/react";
-import { Plus } from "lucide-react";
-import { useState } from "react";
-import TeacherExamController from "@/actions/App/Http/Controllers/Teacher/ExamController";
-import { DeleteConfirmationDialog } from "@/components/admin/delete-confirmation-dialog";
-import Heading from "@/components/heading";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Head, Link, router } from '@inertiajs/react';
+import { Plus } from 'lucide-react';
+import { useState } from 'react';
+import TeacherExamController from '@/actions/App/Http/Controllers/Teacher/ExamController';
+import { DeleteConfirmationDialog } from '@/components/admin/delete-confirmation-dialog';
+import Heading from '@/components/heading';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
     DialogDescription,
     DialogHeader,
     DialogTitle,
-} from "@/components/ui/dialog";
-import { dashboard as teacherDashboard } from "@/routes/teacher";
+} from '@/components/ui/dialog';
+import { dashboard as teacherDashboard } from '@/routes/teacher';
 import {
     index as examsIndex,
     publish as examPublish,
     show as examShow,
     unpublish as examUnpublish,
-} from "@/routes/teacher/exams";
-import { ExamForm, type BankOption, type Option } from "./form";
+} from '@/routes/teacher/exams';
+import { ExamForm, type BankOption, type Option } from './form';
 
 type Exam = {
     id: number;
@@ -34,25 +34,25 @@ type Exam = {
     shuffle_options: boolean;
     show_result_immediately: boolean;
     is_published: boolean;
-    status: "draft" | "scheduled" | "ongoing" | "finished";
+    status: 'draft' | 'scheduled' | 'ongoing' | 'finished';
     questions_count: number;
 };
 
-const STATUS_LABELS: Record<Exam["status"], string> = {
-    draft: "Draft",
-    scheduled: "Terjadwal",
-    ongoing: "Berlangsung",
-    finished: "Selesai",
+const STATUS_LABELS: Record<Exam['status'], string> = {
+    draft: 'Draft',
+    scheduled: 'Terjadwal',
+    ongoing: 'Berlangsung',
+    finished: 'Selesai',
 };
 
 const STATUS_VARIANT: Record<
-    Exam["status"],
-    "secondary" | "default" | "destructive" | "outline"
+    Exam['status'],
+    'secondary' | 'default' | 'destructive' | 'outline'
 > = {
-    draft: "secondary",
-    scheduled: "default",
-    ongoing: "destructive",
-    finished: "outline",
+    draft: 'secondary',
+    scheduled: 'default',
+    ongoing: 'destructive',
+    finished: 'outline',
 };
 
 export default function TeacherExams({
@@ -112,7 +112,7 @@ export default function TeacherExams({
                                             {exam.subject} · {exam.class}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            {exam.started_at_label} ·{" "}
+                                            {exam.started_at_label} ·{' '}
                                             {exam.duration_minutes} menit
                                         </p>
                                     </div>
@@ -172,14 +172,14 @@ export default function TeacherExams({
                                         size="sm"
                                         variant={
                                             exam.is_published
-                                                ? "outline"
-                                                : "default"
+                                                ? 'outline'
+                                                : 'default'
                                         }
                                         onClick={() => togglePublish(exam)}
                                     >
                                         {exam.is_published
-                                            ? "Tarik ke Draft"
-                                            : "Publikasikan"}
+                                            ? 'Tarik ke Draft'
+                                            : 'Publikasikan'}
                                     </Button>
                                     <Button
                                         size="sm"
@@ -202,8 +202,8 @@ export default function TeacherExams({
 
                 {createOpen && (
                     <Dialog open onOpenChange={setCreateOpen}>
-                        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-                            <DialogHeader>
+                        <DialogContent className="flex h-[min(90dvh,56rem)] max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+                            <DialogHeader className="shrink-0 border-b px-6 py-5 pr-12">
                                 <DialogTitle>Buat Ujian</DialogTitle>
                                 <DialogDescription>
                                     Pilih soal dari bank soal Anda, tentukan
@@ -242,7 +242,7 @@ export default function TeacherExams({
 
 TeacherExams.layout = {
     breadcrumbs: [
-        { title: "Dashboard Guru", href: teacherDashboard() },
-        { title: "Ujian", href: examsIndex() },
+        { title: 'Dashboard Guru', href: teacherDashboard() },
+        { title: 'Ujian', href: examsIndex() },
     ],
 };
