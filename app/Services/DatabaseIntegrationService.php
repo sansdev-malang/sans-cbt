@@ -45,19 +45,27 @@ class DatabaseIntegrationService
             $stats['classrooms_count'] = Classroom::count();
             $stats['teachers_count'] = Teacher::count();
 
-            $activeAy = AcademicYear::where('is_active', true)->first();
-            $stats['active_academic_year'] = $activeAy ? [
-                'id' => $activeAy->id,
-                'name' => $activeAy->name,
-                'is_active' => true,
-            ] : null;
+            try {
+                $activeAy = AcademicYear::where('is_active', true)->first();
+                $stats['active_academic_year'] = $activeAy ? [
+                    'id' => $activeAy->id,
+                    'name' => $activeAy->name,
+                    'is_active' => true,
+                ] : null;
+            } catch (\Throwable) {
+                $stats['active_academic_year'] = null;
+            }
 
-            $activeSem = Semester::where('is_active', true)->first();
-            $stats['active_semester'] = $activeSem ? [
-                'id' => $activeSem->id,
-                'name' => $activeSem->name,
-                'type' => $activeSem->semester_type ?? $activeSem->name,
-            ] : null;
+            try {
+                $activeSem = Semester::where('is_active', true)->first();
+                $stats['active_semester'] = $activeSem ? [
+                    'id' => $activeSem->id,
+                    'name' => $activeSem->name,
+                    'type' => $activeSem->semester_type ?? $activeSem->name,
+                ] : null;
+            } catch (\Throwable) {
+                $stats['active_semester'] = null;
+            }
 
         } catch (\Throwable $e) {
             $isConnected = false;

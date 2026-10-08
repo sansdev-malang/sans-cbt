@@ -37,16 +37,6 @@ class UnitContext
      */
     public static function getUnit(): string
     {
-        if (auth()->check()) {
-            $user = auth()->user();
-            if (!empty($user->active_unit) && isset(self::UNITS[$user->active_unit])) {
-                return $user->active_unit;
-            }
-            if (!empty($user->unit_origin) && isset(self::UNITS[strtolower($user->unit_origin)])) {
-                return strtolower($user->unit_origin);
-            }
-        }
-
         $sessionUnit = session('active_unit');
         if ($sessionUnit && isset(self::UNITS[$sessionUnit])) {
             return $sessionUnit;
@@ -56,20 +46,13 @@ class UnitContext
     }
 
     /**
-     * Set active unit in session and optional user model.
+     * Set active unit in session.
      */
     public static function setUnit(string $unit): void
     {
         $unit = strtolower(trim($unit));
         if (isset(self::UNITS[$unit])) {
             session(['active_unit' => $unit]);
-            if (auth()->check()) {
-                $user = auth()->user();
-                if ($user && method_exists($user, 'isDirty')) {
-                    $user->active_unit = $unit;
-                    $user->save();
-                }
-            }
         }
     }
 
