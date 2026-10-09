@@ -246,11 +246,36 @@ class DatabaseIntegrationService
                 $conn = UnitContext::getConnection($unit);
                 $info = UnitContext::getUnitInfo($unit);
 
-                // A. Teachers
+                // A. Teachers (Hanya Pegawai dengan peran Guru / Tenaga Pendidik / Wali Kelas)
+                $teacherType = DB::connection($conn)->table('employee_types')
+                    ->where('code', 'teacher')
+                    ->orWhere('name', 'like', '%Guru%')
+                    ->first();
+                $teacherTypeId = $teacherType?->id ?? 1;
+
+                $homeroomTeacherIds = DB::connection($conn)->table('classrooms')
+                    ->whereNotNull('homeroom_teacher_id')
+                    ->pluck('homeroom_teacher_id')
+                    ->unique()
+                    ->toArray();
+
                 $masterEmployees = DB::connection($conn)->table('employees')
-                    ->where(fn($q) => $q->where('status', 'Active')->orWhereNull('status'))
+                    ->where(function ($q) use ($teacherTypeId, $homeroomTeacherIds) {
+                        $q->where('employee_type_id', $teacherTypeId);
+                        if (!empty($homeroomTeacherIds)) {
+                            $q->orWhereIn('id', $homeroomTeacherIds);
+                        }
+                        $q->orWhere('position', 'like', '%Guru%')
+                          ->orWhere('position', 'like', '%GPK%')
+                          ->orWhere('position', 'like', '%GPQ%')
+                          ->orWhere('position', 'like', '%Pengajar%')
+                          ->orWhere('position', 'like', '%Pendidik%');
+                    })
+                    ->where(fn($q) => $q->where('status', 'Active')->orWhere('status', 'aktif')->orWhereNull('status'))
                     ->get();
 
+                $validTeacherIds = [];
+                $validUserIds = [];
                 $employeeToTeacherId = [];
 
                 foreach ($masterEmployees as $emp) {
@@ -303,7 +328,38 @@ class DatabaseIntegrationService
                         ]);
                     }
 
+                    $validTeacherIds[] = $teacherId;
+                    $validUserIds[] = $userId;
                     $employeeToTeacherId[$emp->id] = $teacherId;
+                }
+
+                // Bersihkan pegawai non-guru yang sebelumnya ter-sync di unit ini
+                $staleTeachers = DB::table('teachers')
+                    ->where('unit', $unit)
+                    ->whereNotIn('id', $validTeacherIds)
+                    ->where(function ($q) {
+                        $q->where('nip', 'like', 'EMP_%')
+                          ->orWhere('nip', 'like', '35%')
+                          ->orWhere('nip', 'like', '31%')
+                          ->orWhere('nip', 'like', '32%')
+                          ->orWhere('nip', 'like', '33%')
+                          ->orWhere('nip', 'like', '36%')
+                          ->orWhere('nip', 'like', '62%');
+                    })
+                    ->get();
+
+                foreach ($staleTeachers as $stale) {
+                    // Cek apakah tidak dipakai di relasi kelas/ujian
+                    $hasClasses = DB::table('classes')->where('homeroom_teacher_id', $stale->id)->exists();
+                    $hasExams = DB::table('exams')->where('teacher_id', $stale->id)->exists();
+                    $hasBanks = DB::table('question_banks')->where('teacher_id', $stale->id)->exists();
+
+                    if (!$hasClasses && !$hasExams && !$hasBanks) {
+                        DB::table('teachers')->where('id', $stale->id)->delete();
+                        if ($stale->user_id && !in_array($stale->user_id, $validUserIds)) {
+                            DB::table('users')->where('id', $stale->user_id)->where('role', \App\Role::Guru->value)->delete();
+                        }
+                    }
                 }
 
                 // B. Academic Year

@@ -27,7 +27,7 @@ class Classroom extends MasterModel
 
     public function homeroomTeacher(): BelongsTo
     {
-        return $this->belongsTo(Teacher::class, 'teacher_id');
+        return $this->belongsTo(Teacher::class, 'homeroom_teacher_id');
     }
 
     public function students(): HasMany
