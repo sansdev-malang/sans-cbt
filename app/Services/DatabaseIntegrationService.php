@@ -152,12 +152,13 @@ class DatabaseIntegrationService
                 'title' => 'Rombongan Belajar (Kelas)',
                 'data' => Classroom::with(['classLevel', 'academicYear', 'homeroomTeacher'])
                     ->orderBy('class_level_id')
+                    ->orderBy('code')
                     ->orderBy('name')
                     ->take($limit)
                     ->get()
                     ->map(fn($c) => [
                         'id' => $c->id,
-                        'name' => $c->name,
+                        'name' => $c->full_name,
                         'code' => $c->code,
                         'level' => $c->classLevel?->name ?? '-',
                         'academic_year' => $c->academicYear?->name ?? '-',
@@ -209,7 +210,7 @@ class DatabaseIntegrationService
                         'nisn' => $s->nisn ?? '-',
                         'name' => $s->full_name ?? ($s->name ?? '-'),
                         'gender' => $s->gender === 'P' || $s->gender === 'female' ? 'Perempuan' : 'Laki-laki',
-                        'classroom' => $s->classroom?->name ?? '-',
+                        'classroom' => $s->classroom?->full_name ?? ($s->classroom?->name ?? '-'),
                         'level' => $s->classLevel?->name ?? '-',
                         'status' => $s->status ?? 'aktif',
                     ]),
@@ -375,15 +376,27 @@ class DatabaseIntegrationService
                     $classLevel = DB::connection($conn)->table('class_levels')->where('id', $mc->class_level_id)->first();
                     $levelName = $classLevel->name ?? (strtoupper($unit) . ' ' . substr($mc->name, 0, 1));
 
-                    $key = "{$mc->name}_{$academicYearName}";
+                    $className = $mc->name;
+                    if (!empty($mc->code) && !empty($mc->name)) {
+                        if (!str_starts_with(strtoupper($mc->name), strtoupper($mc->code))) {
+                            $className = "{$mc->code} {$mc->name}";
+                        }
+                    } elseif (!empty($mc->code)) {
+                        $className = $mc->code;
+                    }
+
+                    $key = "{$className}_{$academicYearName}";
+                    $oldKey = "{$mc->name}_{$academicYearName}";
                     $homeroomId = isset($employeeToTeacherId[$mc->teacher_id ?? $mc->homeroom_teacher_id ?? null])
                         ? $employeeToTeacherId[$mc->teacher_id ?? $mc->homeroom_teacher_id]
                         : null;
 
-                    if (!isset($classesLookup[$key])) {
+                    $existingClass = $classesLookup[$key] ?? ($classesLookup[$oldKey] ?? null);
+
+                    if (!$existingClass) {
                         $classId = DB::table('classes')->insertGetId([
                             'unit' => $unit,
-                            'name' => $mc->name,
+                            'name' => $className,
                             'level' => $levelName,
                             'academic_year' => $academicYearName,
                             'homeroom_teacher_id' => $homeroomId,
@@ -393,16 +406,35 @@ class DatabaseIntegrationService
                         $classesLookup[$key] = (object)['id' => $classId];
                         $summary['classes_synced']++;
                     } else {
-                        $classId = $classesLookup[$key]->id;
+                        $classId = $existingClass->id;
                         DB::table('classes')->where('id', $classId)->update([
                             'unit' => $unit,
+                            'name' => $className,
                             'level' => $levelName,
                             'homeroom_teacher_id' => $homeroomId,
                             'updated_at' => now(),
                         ]);
+                        $classesLookup[$key] = (object)['id' => $classId];
                     }
 
                     $classroomMap[$mc->id] = $classId;
+                }
+
+                // Bersihkan data kelas dummy seeder jika rombel asli telah tersinkronisasi
+                $dummyClasses = DB::table('classes')
+                    ->where('unit', $unit)
+                    ->whereIn('name', ['1A', '2A', '3A'])
+                    ->whereIn('level', ['1', '2', '3'])
+                    ->get();
+
+                if ($dummyClasses->isNotEmpty() && !empty($classroomMap)) {
+                    $firstRealClassId = reset($classroomMap);
+                    foreach ($dummyClasses as $dummy) {
+                        DB::table('exams')->where('school_class_id', $dummy->id)->update(['school_class_id' => $firstRealClassId]);
+                        DB::table('question_banks')->where('school_class_id', $dummy->id)->update(['school_class_id' => $firstRealClassId]);
+                        DB::table('class_students')->where('class_id', $dummy->id)->delete();
+                        DB::table('classes')->where('id', $dummy->id)->delete();
+                    }
                 }
 
                 // D. Students

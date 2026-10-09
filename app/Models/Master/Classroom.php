@@ -15,6 +15,10 @@ class Classroom extends MasterModel
         'capacity' => 'integer',
     ];
 
+    protected $appends = [
+        'full_name',
+    ];
+
     public function classLevel(): BelongsTo
     {
         return $this->belongsTo(ClassLevel::class, 'class_level_id');
@@ -33,5 +37,19 @@ class Classroom extends MasterModel
     public function students(): HasMany
     {
         return $this->hasMany(Student::class, 'classroom_id');
+    }
+
+    /**
+     * Get combined display name (e.g. "1A Berlian" or "7A - Samudra Pasai").
+     */
+    public function getFullNameAttribute(): string
+    {
+        if ($this->code && $this->name) {
+            if (str_starts_with(strtoupper($this->name), strtoupper($this->code))) {
+                return $this->name;
+            }
+            return "{$this->code} {$this->name}";
+        }
+        return $this->name ?: ($this->code ?: '-');
     }
 }
