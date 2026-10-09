@@ -4,16 +4,10 @@ import {
     Activity,
     AlertCircle,
     ArrowRight,
-    BookOpen,
-    Calendar,
-    CheckCircle2,
     Database,
     GraduationCap,
-    Layers,
     Loader2,
     RefreshCw,
-    Search,
-    Server,
     ShieldCheck,
     Sparkles,
     UserCheck,
@@ -21,7 +15,6 @@ import {
     Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,7 +24,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { dashboard } from '@/routes/admin';
 
 type UnitStats = {
@@ -74,37 +66,21 @@ type UnitStatus = {
     checked_at: string;
 };
 
-type PreviewItem = Record<string, any>;
-
-type PreviewData = {
-    type: string;
-    title: string;
-    data: PreviewItem[];
-};
-
 interface Props {
     unitsStatus: Record<string, UnitStatus>;
     activeUnit: string;
     availableUnits: Record<string, any>;
-    previewData: PreviewData;
-    previewType: string;
 }
 
 export default function DatabaseIntegrationsIndex({
     unitsStatus,
     activeUnit: initialActiveUnit,
-    availableUnits,
-    previewData: initialPreviewData,
-    previewType: initialPreviewType,
+    availableUnits: _availableUnits,
 }: Props) {
     const [activeUnit, setActiveUnit] = useState<string>(initialActiveUnit);
-    const [previewType, setPreviewType] = useState<string>(initialPreviewType || 'students');
-    const [previewData, setPreviewData] = useState<PreviewData>(initialPreviewData);
-    const [loadingPreview, setLoadingPreview] = useState<boolean>(false);
     const [testingUnit, setTestingUnit] = useState<string | null>(null);
     const [testingAll, setTestingAll] = useState<boolean>(false);
     const [syncingUnit, setSyncingUnit] = useState<string | null>(null);
-    const [searchFilter, setSearchFilter] = useState<string>('');
 
     // Synchronize Master Data (SD/SMP -> CBT)
     const handleSync = async (unitKey: string = 'all') => {
@@ -157,7 +133,6 @@ export default function DatabaseIntegrationsIndex({
                 toast.success('Unit Berhasil Dialihkan', {
                     description: `Sekarang CBT aktif mengelola data untuk ${unitKey.toUpperCase()}.`,
                 });
-                loadPreview(unitKey, previewType);
             }
         } catch (err: any) {
             toast.error('Gagal Mengalihkan Unit', { description: err.message });
@@ -204,42 +179,6 @@ export default function DatabaseIntegrationsIndex({
         router.reload();
     };
 
-    // Load Live Preview Data via JSON
-    const loadPreview = async (unitKey: string, type: string) => {
-        setLoadingPreview(true);
-        try {
-            const res = await fetch(`/admin/integrations/preview?unit=${unitKey}&type=${type}&limit=20`, {
-                headers: { 'Accept': 'application/json' },
-            });
-            const result = await res.json();
-            if (result.success && result.preview) {
-                setPreviewData(result.preview);
-            }
-        } catch (err: any) {
-            toast.error('Gagal Memuat Preview Data', { description: err.message });
-        } finally {
-            setLoadingPreview(false);
-        }
-    };
-
-    const handleTabChange = (type: string) => {
-        setPreviewType(type);
-        loadPreview(activeUnit, type);
-    };
-
-    const handlePreviewUnitChange = (unitKey: string) => {
-        handleSwitchUnit(unitKey);
-    };
-
-    // Filter preview records by search text
-    const filteredRecords = (previewData?.data || []).filter((item) => {
-        if (!searchFilter) return true;
-        const s = searchFilter.toLowerCase();
-        return Object.values(item).some(
-            (val) => val && String(val).toLowerCase().includes(s)
-        );
-    });
-
     const totalStudentsAll = Object.values(unitsStatus).reduce((sum, u) => sum + (u.stats.students_count || 0), 0);
     const totalClassesAll = Object.values(unitsStatus).reduce((sum, u) => sum + (u.stats.classrooms_count || 0), 0);
     const totalTeachersAll = Object.values(unitsStatus).reduce((sum, u) => sum + (u.stats.teachers_count || 0), 0);
@@ -272,7 +211,7 @@ export default function DatabaseIntegrationsIndex({
                             variant="outline"
                             size="sm"
                             onClick={() => router.reload()}
-                            className="text-xs font-semibold"
+                            className="text-xs font-semibold cursor-pointer"
                         >
                             <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
                             Refresh Status
@@ -282,7 +221,7 @@ export default function DatabaseIntegrationsIndex({
                             size="sm"
                             onClick={handleTestAll}
                             disabled={testingAll}
-                            className="text-xs font-semibold"
+                            className="text-xs font-semibold cursor-pointer"
                         >
                             {testingAll ? (
                                 <>
@@ -300,7 +239,7 @@ export default function DatabaseIntegrationsIndex({
                             size="sm"
                             onClick={() => handleSync('all')}
                             disabled={syncingUnit !== null}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs cursor-pointer"
                         >
                             {syncingUnit === 'all' ? (
                                 <>
@@ -393,7 +332,6 @@ export default function DatabaseIntegrationsIndex({
                     {Object.entries(unitsStatus).map(([key, u]) => {
                         const isUnitActive = activeUnit === key;
                         const isSd = key === 'sd';
-                        const themeColor = isSd ? 'emerald' : 'indigo';
 
                         return (
                             <Card
@@ -515,7 +453,7 @@ export default function DatabaseIntegrationsIndex({
                                                 size="sm"
                                                 onClick={() => handleTestConnection(key)}
                                                 disabled={testingUnit === key}
-                                                className="text-xs font-semibold"
+                                                className="text-xs font-semibold cursor-pointer"
                                             >
                                                 {testingUnit === key ? (
                                                     <>
@@ -536,7 +474,7 @@ export default function DatabaseIntegrationsIndex({
                                                 size="sm"
                                                 onClick={() => handleSync(key)}
                                                 disabled={syncingUnit !== null}
-                                                className="text-xs font-semibold text-slate-700 dark:text-slate-200"
+                                                className="text-xs font-semibold text-slate-700 dark:text-slate-200 cursor-pointer"
                                             >
                                                 {syncingUnit === key ? (
                                                     <>
@@ -557,7 +495,7 @@ export default function DatabaseIntegrationsIndex({
                                             size="sm"
                                             onClick={() => handleSwitchUnit(key)}
                                             disabled={isUnitActive}
-                                            className={`text-xs font-bold ${
+                                            className={`text-xs font-bold cursor-pointer ${
                                                 isUnitActive
                                                     ? 'bg-slate-100 text-slate-400 dark:bg-slate-800 cursor-not-allowed'
                                                     : isSd
@@ -575,266 +513,6 @@ export default function DatabaseIntegrationsIndex({
                     })}
                 </div>
 
-                {/* LIVE MASTER DATA INSPECTOR SECTION */}
-                <Card className="border-slate-200 dark:border-slate-800 shadow-xs">
-                    <CardHeader className="p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3.5">
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <CardTitle className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                                        <Layers className="w-4 h-4 text-emerald-600" />
-                                        Live Inspector Master Data ({activeUnit.toUpperCase()})
-                                    </CardTitle>
-                                    <Badge variant="outline" className="text-[10px] font-mono">
-                                        Database: sans-{activeUnit}
-                                    </Badge>
-                                </div>
-                                <CardDescription className="text-xs mt-0.5">
-                                    Melihat data master yang berhasil dibaca secara langsung dari database unit terpilih.
-                                </CardDescription>
-                            </div>
-
-                            {/* Unit Switcher Pill for Inspector */}
-                            <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0">
-                                <button
-                                    type="button"
-                                    onClick={() => handlePreviewUnitChange('sd')}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                        activeUnit === 'sd'
-                                            ? 'bg-emerald-600 text-white shadow-2xs'
-                                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                    }`}
-                                >
-                                    Unit SD
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handlePreviewUnitChange('smp')}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                        activeUnit === 'smp'
-                                            ? 'bg-indigo-600 text-white shadow-2xs'
-                                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                    }`}
-                                >
-                                    Unit SMP
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Inspector Tabs */}
-                        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800/80 mt-2">
-                            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                                <button
-                                    type="button"
-                                    onClick={() => handleTabChange('students')}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                                        previewType === 'students'
-                                            ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-                                            : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                    }`}
-                                >
-                                    <Users className="w-3.5 h-3.5" />
-                                    <span>Data Siswa</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleTabChange('classrooms')}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                                        previewType === 'classrooms'
-                                            ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-                                            : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                    }`}
-                                >
-                                    <GraduationCap className="w-3.5 h-3.5" />
-                                    <span>Rombel & Wali Kelas</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleTabChange('teachers')}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                                        previewType === 'teachers'
-                                            ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-                                            : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                    }`}
-                                >
-                                    <UserCheck className="w-3.5 h-3.5" />
-                                    <span>Guru & Pendidik</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleTabChange('academic_years')}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                                        previewType === 'academic_years'
-                                            ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs'
-                                            : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                    }`}
-                                >
-                                    <Calendar className="w-3.5 h-3.5" />
-                                    <span>Tahun Pelajaran</span>
-                                </button>
-                            </div>
-
-                            {/* Quick search */}
-                            <div className="relative w-full sm:w-60">
-                                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                <Input
-                                    type="text"
-                                    placeholder="Cari data..."
-                                    value={searchFilter}
-                                    onChange={(e) => setSearchFilter(e.target.value)}
-                                    className="pl-8 h-8 text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
-                                />
-                            </div>
-                        </div>
-                    </CardHeader>
-
-                    <CardContent className="p-0">
-                        {loadingPreview ? (
-                            <div className="py-12 flex flex-col items-center justify-center gap-2.5 text-slate-400">
-                                <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-                                <p className="text-xs font-medium">Membaca data master dari database sans-{activeUnit}...</p>
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-xs text-left">
-                                    <thead className="bg-slate-50/75 dark:bg-slate-950/50 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[11px]">
-                                        {previewType === 'students' && (
-                                            <tr>
-                                                <th className="px-4 py-3">NIS</th>
-                                                <th className="px-4 py-3">Nama Siswa</th>
-                                                <th className="px-4 py-3">Jenis Kelamin</th>
-                                                <th className="px-4 py-3">Rombel / Kelas</th>
-                                                <th className="px-4 py-3 text-center">Status</th>
-                                            </tr>
-                                        )}
-                                        {previewType === 'classrooms' && (
-                                            <tr>
-                                                <th className="px-4 py-3">Kode</th>
-                                                <th className="px-4 py-3">Nama Rombel</th>
-                                                <th className="px-4 py-3">Tingkat Kelas</th>
-                                                <th className="px-4 py-3">Tahun Pelajaran</th>
-                                                <th className="px-4 py-3">Wali Kelas</th>
-                                            </tr>
-                                        )}
-                                        {previewType === 'teachers' && (
-                                            <tr>
-                                                <th className="px-4 py-3">NIP</th>
-                                                <th className="px-4 py-3">Nama Guru</th>
-                                                <th className="px-4 py-3">Email</th>
-                                                <th className="px-4 py-3">No. Telepon / WA</th>
-                                                <th className="px-4 py-3">Jabatan</th>
-                                            </tr>
-                                        )}
-                                        {previewType === 'academic_years' && (
-                                            <tr>
-                                                <th className="px-4 py-3">Tahun Pelajaran</th>
-                                                <th className="px-4 py-3">Daftar Semester</th>
-                                                <th className="px-4 py-3 text-center">Status</th>
-                                            </tr>
-                                        )}
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                        {filteredRecords.length > 0 ? (
-                                            filteredRecords.map((row, idx) => (
-                                                <tr key={idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                                                    {previewType === 'students' && (
-                                                        <>
-                                                            <td className="px-4 py-3 font-mono font-bold text-emerald-700 dark:text-emerald-400">
-                                                                {row.nis}
-                                                            </td>
-                                                            <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100">
-                                                                {row.name}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                                                                {row.gender}
-                                                            </td>
-                                                            <td className="px-4 py-3">
-                                                                <span className="inline-flex px-2 py-0.5 rounded text-[10.5px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                                                                    {row.classroom}
-                                                                </span>
-                                                            </td>
-                                                            <td className="px-4 py-3 text-center">
-                                                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                                                                    {row.status}
-                                                                </span>
-                                                            </td>
-                                                        </>
-                                                    )}
-                                                    {previewType === 'classrooms' && (
-                                                        <>
-                                                            <td className="px-4 py-3 font-mono font-bold text-slate-700 dark:text-slate-300">
-                                                                {row.code || row.name}
-                                                            </td>
-                                                            <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100">
-                                                                {row.name}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                                                                {row.level}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                                                                {row.academic_year}
-                                                            </td>
-                                                            <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">
-                                                                {row.homeroom_teacher}
-                                                            </td>
-                                                        </>
-                                                    )}
-                                                    {previewType === 'teachers' && (
-                                                        <>
-                                                            <td className="px-4 py-3 font-mono text-slate-500">
-                                                                {row.nip}
-                                                            </td>
-                                                            <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100">
-                                                                {row.name}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                                                                {row.email}
-                                                            </td>
-                                                            <td className="px-4 py-3 font-mono text-slate-600 dark:text-slate-400">
-                                                                {row.phone}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                                                                {row.position}
-                                                            </td>
-                                                        </>
-                                                    )}
-                                                    {previewType === 'academic_years' && (
-                                                        <>
-                                                            <td className="px-4 py-3 font-bold text-slate-900 dark:text-slate-100">
-                                                                {row.name}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                                                                {row.semesters || '-'}
-                                                            </td>
-                                                            <td className="px-4 py-3 text-center">
-                                                                {row.is_active ? (
-                                                                    <Badge className="bg-emerald-600 text-white text-[10px]">
-                                                                        Aktif
-                                                                    </Badge>
-                                                                ) : (
-                                                                    <span className="text-slate-400 text-[10px]">
-                                                                        Arsip
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                        </>
-                                                    )}
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
-                                                    Tidak ada data ditemukan untuk kriteria pencarian.
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
                 {/* Architecture & Documentation Card */}
                 <Card className="border-slate-200 dark:border-slate-800 bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-indigo-500/5 shadow-xs">
                     <CardContent className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -844,10 +522,10 @@ export default function DatabaseIntegrationsIndex({
                             </div>
                             <div>
                                 <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                                    Single Source of Truth & Zero Sync Overhead
+                                    Multi-Database Architecture & Zero Sync Overhead
                                 </h4>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-3xl leading-relaxed">
-                                    Data siswa, rombel, dan guru dibaca langsung dari database master unit masing-masing. Tidak ada duplikasi data, sehingga setiap perubahan mutasi siswa atau jadwal rombel di aplikasi SD/SMP langsung terdeteksi otomatis oleh CBT.
+                                    Data siswa, rombel, dan guru terhubung langsung dari database master unit masing-masing. Detail data setiap entitas dapat dikelola langsung melalui menu <span className="font-semibold text-slate-700 dark:text-slate-300">Siswa</span>, <span className="font-semibold text-slate-700 dark:text-slate-300">Guru</span>, dan <span className="font-semibold text-slate-700 dark:text-slate-300">Kelas</span>.
                                 </p>
                             </div>
                         </div>

@@ -30,15 +30,11 @@ class DatabaseIntegrationController extends Controller
         }
 
         $unitsStatus = $this->service->getAllUnitsStatus();
-        $previewType = $request->get('preview_type', 'students');
-        $previewData = $this->service->previewMasterData($activeUnit, $previewType, 15);
 
         return Inertia::render('admin/integrations/index', [
             'unitsStatus' => $unitsStatus,
             'activeUnit' => $activeUnit,
             'availableUnits' => UnitContext::getAllUnits(),
-            'previewData' => $previewData,
-            'previewType' => $previewType,
         ]);
     }
 
