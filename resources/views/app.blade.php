@@ -30,8 +30,17 @@
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        @php
+            $customFavicon = \Illuminate\Support\Facades\Schema::hasTable('site_settings')
+                ? \Illuminate\Support\Facades\DB::table('site_settings')->where('key', 'favicon_path')->value('value')
+                : null;
+        @endphp
+        @if ($customFavicon)
+            <link rel="icon" href="{{ '/storage/'.ltrim($customFavicon, '/') }}">
+        @else
+            <link rel="icon" href="/favicon.ico" sizes="any">
+            <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        @endif
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         @fonts

@@ -3,6 +3,8 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -38,10 +40,25 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'branding' => fn () => [
+                'logoUrl' => $this->brandingUrl('logo_path'),
+                'faviconUrl' => $this->brandingUrl('favicon_path'),
+            ],
             'auth' => [
                 'user' => $request->user(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    private function brandingUrl(string $key): ?string
+    {
+        if (! Schema::hasTable('site_settings')) {
+            return null;
+        }
+
+        $path = DB::table('site_settings')->where('key', $key)->value('value');
+
+        return is_string($path) && $path !== '' ? '/storage/'.ltrim($path, '/') : null;
     }
 }

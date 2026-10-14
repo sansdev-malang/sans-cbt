@@ -1,6 +1,34 @@
+import { useEffect } from 'react';
+import { usePage } from '@inertiajs/react';
 import type { SVGAttributes } from 'react';
 
 export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
+    const { branding } = usePage().props;
+
+    useEffect(() => {
+        const faviconUrl = branding.faviconUrl;
+        if (!faviconUrl) return;
+
+        document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]').forEach((link) => {
+            link.href = faviconUrl;
+            link.type = faviconUrl.toLowerCase().endsWith('.ico')
+                ? 'image/x-icon'
+                : 'image/png';
+        });
+    }, [branding.faviconUrl]);
+
+    if (branding.logoUrl) {
+        return (
+            <img
+                src={branding.logoUrl}
+                className={props.className}
+                style={props.style}
+                alt=""
+                aria-hidden="true"
+            />
+        );
+    }
+
     return (
         <svg {...props} viewBox="0 0 40 42" xmlns="http://www.w3.org/2000/svg">
             <path

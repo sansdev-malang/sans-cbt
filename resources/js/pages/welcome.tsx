@@ -1,5 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowUpRight, GraduationCap } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
+import AppLogoIcon from '@/components/app-logo-icon';
 import { dashboard, login } from '@/routes';
 
 export default function Welcome() {
@@ -16,7 +17,7 @@ export default function Welcome() {
                     <header className="flex items-center justify-between py-6 sm:py-8">
                         <div className="flex items-center gap-3">
                             <div className="grid size-10 place-items-center rounded-xl border border-white/15 bg-white/10 text-white shadow-lg shadow-black/10 backdrop-blur-sm">
-                                <GraduationCap className="size-5" />
+                                <AppLogoIcon className="size-5 fill-current" />
                             </div>
                             <div>
                                 <p className="text-sm font-bold tracking-tight">
