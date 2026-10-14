@@ -159,15 +159,6 @@ export default function TeacherExams({
                                             Detail
                                         </Link>
                                     </Button>
-                                    <Button asChild size="sm" variant="outline">
-                                        <Link
-                                            href={TeacherExamController.edit.url(
-                                                exam.id,
-                                            )}
-                                        >
-                                            Edit
-                                        </Link>
-                                    </Button>
                                     <Button
                                         size="sm"
                                         variant={

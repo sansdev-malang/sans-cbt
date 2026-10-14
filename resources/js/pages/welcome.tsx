@@ -1,5 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowUpRight, GraduationCap, ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, GraduationCap } from 'lucide-react';
 import { dashboard, login } from '@/routes';
 
 export default function Welcome() {
@@ -11,79 +11,60 @@ export default function Welcome() {
         <>
             <Head title="CBT SD Anak Saleh" />
 
-            <main className="relative isolate min-h-screen overflow-hidden bg-slate-50 text-slate-950">
-                <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_78%_24%,rgba(139,92,246,0.16),transparent_23%),radial-gradient(circle_at_20%_85%,rgba(59,130,246,0.12),transparent_30%),linear-gradient(135deg,#f8fafc_0%,#f5f3ff_48%,#f8fafc_100%)]" />
-                <div className="absolute inset-0 -z-10 opacity-[0.32] [background-image:linear-gradient(rgba(99,102,241,0.16)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.16)_1px,transparent_1px)] [background-size:42px_42px] [mask-image:linear-gradient(to_bottom,black,transparent_82%)]" />
-                <div className="absolute top-[-14rem] right-[-10rem] -z-10 size-[32rem] rounded-full border border-violet-300/30" />
-                <div className="absolute top-[-8rem] right-[-4rem] -z-10 size-[20rem] rounded-full border border-blue-300/30" />
-
-                <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-6 sm:px-10 lg:px-12">
-                    <header className="flex items-center justify-between">
+            <main className="landing-mesh relative isolate flex min-h-svh flex-col overflow-hidden text-white">
+                <div className="relative z-10 mx-auto flex min-h-svh w-full max-w-7xl flex-1 flex-col px-6 sm:px-10 lg:px-12">
+                    <header className="flex items-center justify-between py-6 sm:py-8">
                         <div className="flex items-center gap-3">
-                            <div className="grid size-10 place-items-center rounded-xl bg-violet-600 text-white shadow-lg shadow-violet-500/20">
+                            <div className="grid size-10 place-items-center rounded-xl border border-white/15 bg-white/10 text-white shadow-lg shadow-black/10 backdrop-blur-sm">
                                 <GraduationCap className="size-5" />
                             </div>
                             <div>
-                                <p className="text-sm font-bold tracking-tight text-slate-950">Anak Saleh</p>
-                                <p className="text-[10px] font-semibold tracking-[0.18em] text-violet-600 uppercase">Computer Based Test</p>
+                                <p className="text-sm font-bold tracking-tight">
+                                    Anak Saleh
+                                </p>
+                                <p className="mt-0.5 text-[10px] font-semibold tracking-[0.18em] text-white/65 uppercase">
+                                    Computer Based Test
+                                </p>
                             </div>
                         </div>
 
-                        <span className="hidden rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-500 shadow-sm sm:block">Portal Ujian Digital</span>
+                        <span className="rounded-full border border-white/15 bg-white/[0.07] px-3 py-1.5 text-[10px] font-semibold tracking-[0.14em] text-white/75 uppercase backdrop-blur-sm sm:text-xs">
+                            Portal Ujian Digital
+                        </span>
                     </header>
 
-                    <section className="flex flex-1 items-center py-16 sm:py-20">
-                        <div className="grid w-full items-center gap-14 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
-                            <div className="max-w-2xl">
-                                <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-emerald-700">
-                                    <span className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_10px_3px_rgba(16,185,129,0.2)]" />
-                                    RUANG UJIAN TERINTEGRASI
-                                </div>
-
-                                <h1 className="max-w-xl pb-4 text-5xl leading-[1.17] font-black tracking-[-0.055em] text-balance sm:text-6xl lg:text-7xl">
-                                    Ujian cerdas,
-                                    <span className="block bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent">langkah pasti.</span>
-                                </h1>
-
-                                <p className="mt-6 max-w-lg text-base leading-7 text-slate-600 sm:text-lg">
-                                    Sistem CBT SD Anak Saleh untuk pengalaman ujian yang fokus, aman, dan nyaman.
-                                </p>
-
-                                <Link
-                                    href={destination}
-                                    className="mt-9 inline-flex items-center gap-3 rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-violet-700 hover:shadow-[0_12px_30px_rgba(109,40,217,0.22)] focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 focus-visible:outline-none"
-                                >
-                                    {actionLabel}
-                                    <ArrowUpRight className="size-4" />
-                                </Link>
-                            </div>
-
-                            <div className="relative mx-auto w-full max-w-md lg:max-w-none">
-                                <div className="absolute -inset-5 rounded-[2rem] bg-violet-400/20 blur-3xl" />
-                                <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-2xl shadow-slate-900/10 backdrop-blur-xl sm:p-6">
-                                    <div className="flex items-center justify-between border-b border-slate-100 pb-5">
-                                        <div className="flex items-center gap-3">
-                                            <div className="size-2 rounded-full bg-emerald-500" />
-                                            <span className="font-mono text-xs text-slate-500">CBT / READY</span>
-                                        </div>
-                                        <ShieldCheck className="size-5 text-violet-600" />
-                                    </div>
-                                    <div className="mt-8 space-y-4">
-                                        <div className="h-2 w-24 rounded-full bg-violet-500/70" />
-                                        <div className="h-2 w-full rounded-full bg-slate-100" />
-                                        <div className="h-2 w-4/5 rounded-full bg-slate-100" />
-                                        <div className="mt-7 grid grid-cols-3 gap-3">
-                                            {[0, 1, 2].map((item) => (
-                                                <div key={item} className="aspect-square rounded-xl border border-slate-100 bg-slate-50" />
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <section className="flex flex-1 flex-col items-center justify-center py-16 text-center sm:py-20">
+                        <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-[10px] font-semibold tracking-[0.16em] text-blue-50 uppercase backdrop-blur-sm sm:text-xs">
+                            <span className="size-1.5 rounded-full bg-cyan-200 shadow-[0_0_12px_3px_rgba(103,232,249,0.28)]" />
+                            Ruang ujian terintegrasi
                         </div>
+
+                        <h1 className="max-w-5xl pb-2 text-5xl leading-[1.15] font-semibold tracking-[-0.055em] text-balance sm:text-7xl lg:text-[5.5rem]">
+                            Ujian cerdas,
+                            <span className="mt-2 block bg-linear-to-r from-white via-blue-50 to-cyan-200 bg-clip-text text-transparent">
+                                langkah pasti.
+                            </span>
+                        </h1>
+
+                        <p className="mt-7 max-w-xl text-sm leading-7 text-white/75 sm:text-lg sm:leading-8">
+                            Sistem CBT SD Anak Saleh untuk pengalaman ujian yang
+                            fokus, aman, dan nyaman.
+                        </p>
+
+                        <Link
+                            href={destination}
+                            className="mt-9 inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-white px-6 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-black/15 transition hover:-translate-y-0.5 hover:bg-violet-50 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-violet-900"
+                        >
+                            {actionLabel}
+                            <ArrowUpRight className="size-4" />
+                        </Link>
                     </section>
 
-                    <footer className="text-xs text-slate-400">© {new Date().getFullYear()} SD Anak Saleh</footer>
+                    <footer className="relative z-10 grid gap-4 border-t border-white/15 py-5 text-center text-[10px] font-semibold tracking-[0.15em] text-white/60 uppercase sm:grid-cols-3 sm:py-6 sm:text-xs">
+                        <span>Akses siswa dan guru</span>
+                        <span>Ujian terjadwal</span>
+                        <span>Hasil tersimpan terpusat</span>
+                    </footer>
                 </div>
             </main>
         </>

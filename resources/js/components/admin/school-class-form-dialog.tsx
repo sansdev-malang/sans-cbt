@@ -36,7 +36,7 @@ export function SchoolClassFormDialog({
     const isEditing = schoolClass !== null;
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+            <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle>
                         {isEditing ? 'Ubah Kelas' : 'Tambah Kelas'}
@@ -46,78 +46,97 @@ export function SchoolClassFormDialog({
                     </DialogDescription>
                 </DialogHeader>
                 <Form
+                    key={isEditing ? `edit-${schoolClass.id}` : 'create'}
                     {...(isEditing
                         ? SchoolClassController.update.form(schoolClass.id)
                         : SchoolClassController.store.form())}
                     options={{ preserveScroll: true }}
                     onSuccess={() => onOpenChange(false)}
-                    className="space-y-5"
+                    className="flex min-h-0 flex-1 flex-col"
                 >
                     {({ processing, errors }) => (
                         <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="class-unit">Unit Sekolah</Label>
-                                <select
-                                    id="class-unit"
-                                    name="unit"
-                                    defaultValue={schoolClass?.unit ?? 'sd'}
-                                    className="h-9 rounded-md border border-input bg-transparent px-3 text-sm font-medium"
-                                >
-                                    <option value="sd">Unit SD</option>
-                                    <option value="smp">Unit SMP</option>
-                                </select>
-                                <InputError message={errors.unit} />
-                            </div>
-                            <Field
-                                id="class-name"
-                                label="Nama Kelas"
-                                name="name"
-                                required
-                                defaultValue={schoolClass?.name ?? ''}
-                                error={errors.name}
-                            />
-                            <Field
-                                id="class-level"
-                                label="Tingkat"
-                                name="level"
-                                defaultValue={schoolClass?.level ?? ''}
-                                error={errors.level}
-                            />
-                            <Field
-                                id="class-academic-year"
-                                label="Tahun Ajaran"
-                                name="academic_year"
-                                required
-                                defaultValue={schoolClass?.academic_year ?? ''}
-                                error={errors.academic_year}
-                            />
-                            <div className="grid gap-2">
-                                <Label htmlFor="class-teacher">
-                                    Wali Kelas
-                                </Label>
-                                <select
-                                    id="class-teacher"
-                                    name="homeroom_teacher_id"
-                                    defaultValue={
-                                        schoolClass?.homeroom_teacher_id ?? ''
-                                    }
-                                    className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-                                >
-                                    <option value="">Tanpa wali kelas</option>
-                                    {teachers.map((teacher) => (
+                            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="class-unit">Unit Sekolah</Label>
+                                    <select
+                                        id="class-unit"
+                                        name="unit"
+                                        defaultValue={schoolClass?.unit ?? 'sd'}
+                                        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground dark:scheme-dark"
+                                    >
                                         <option
-                                            key={teacher.value}
-                                            value={teacher.value}
+                                            className="bg-background text-foreground"
+                                            value="sd"
                                         >
-                                            {teacher.label}
+                                            Unit SD
                                         </option>
-                                    ))}
-                                </select>
-                                <InputError
-                                    message={errors.homeroom_teacher_id}
+                                        <option
+                                            className="bg-background text-foreground"
+                                            value="smp"
+                                        >
+                                            Unit SMP
+                                        </option>
+                                    </select>
+                                    <InputError message={errors.unit} />
+                                </div>
+                                <Field
+                                    id="class-name"
+                                    label="Nama Kelas"
+                                    name="name"
+                                    required
+                                    defaultValue={schoolClass?.name ?? ''}
+                                    error={errors.name}
                                 />
+                                <Field
+                                    id="class-level"
+                                    label="Tingkat"
+                                    name="level"
+                                    defaultValue={schoolClass?.level ?? ''}
+                                    error={errors.level}
+                                />
+                                <Field
+                                    id="class-academic-year"
+                                    label="Tahun Ajaran"
+                                    name="academic_year"
+                                    required
+                                    defaultValue={schoolClass?.academic_year ?? ''}
+                                    error={errors.academic_year}
+                                />
+                                <div className="grid gap-2">
+                                    <Label htmlFor="class-teacher">
+                                        Wali Kelas
+                                    </Label>
+                                    <select
+                                        id="class-teacher"
+                                        name="homeroom_teacher_id"
+                                        defaultValue={
+                                            schoolClass?.homeroom_teacher_id ?? ''
+                                        }
+                                        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground dark:scheme-dark"
+                                    >
+                                        <option
+                                            className="bg-background text-foreground"
+                                            value=""
+                                        >
+                                            Tanpa wali kelas
+                                        </option>
+                                        {teachers.map((teacher) => (
+                                            <option
+                                                key={teacher.value}
+                                                value={teacher.value}
+                                                className="bg-background text-foreground"
+                                            >
+                                                {teacher.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <InputError
+                                        message={errors.homeroom_teacher_id}
+                                    />
+                                </div>
                             </div>
-                            <div className="flex justify-end gap-2">
+                            <div className="flex shrink-0 justify-end gap-2 border-t pt-4">
                                 <Button
                                     type="button"
                                     variant="outline"

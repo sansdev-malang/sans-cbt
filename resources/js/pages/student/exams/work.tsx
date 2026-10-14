@@ -9,23 +9,13 @@ import {
     Flag,
     Lock,
     Maximize,
-    Send,
     Shield,
     X,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import AppLogoIcon from "@/components/app-logo-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
 import {
     answer as answerRoute,
     security as securityRoute,
@@ -60,7 +50,6 @@ type SessionInfo = {
     locked: boolean;
     locked_reason: string | null;
     started_at_label: string;
-    violation_flag_threshold: number;
 };
 type AnswerValue = Record<string, unknown>;
 
@@ -92,8 +81,9 @@ export default function StudentExamWork({
     answers: Record<string, AnswerValue | null>;
 }) {
     const clockOffset = useRef(session.server_time - Date.now());
+    const [deadline, setDeadline] = useState(session.deadline);
     const [remaining, setRemaining] = useState(
-        () => session.deadline - (Date.now() + clockOffset.current),
+        () => deadline - (Date.now() + clockOffset.current),
     );
     const [current, setCurrent] = useState(0);
     const [answers, setAnswers] = useState<Record<number, AnswerValue | null>>(
@@ -119,9 +109,9 @@ export default function StudentExamWork({
     const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">(
         "idle",
     );
-    const [confirmOpen, setConfirmOpen] = useState(false);
     const [focusMode, setFocusMode] = useState(false);
     const [locked, setLocked] = useState(session.locked);
+    const [lockedReason, setLockedReason] = useState(session.locked_reason);
     // Preferensi ukuran font siswa: 0.8–1.8× (tersimpan lintas soal & sesi).
     const [fontScale, setFontScale] = useState(() => {
         const stored = Number(localStorage.getItem("cbt-font-scale"));
@@ -132,10 +122,32 @@ export default function StudentExamWork({
         {},
     );
     const blurAtRef = useRef<number | null>(null);
-    const lastViolationNoticeRef = useRef(0);
     const fullscreenSupported =
         typeof document !== "undefined" &&
         typeof document.documentElement.requestFullscreen === "function";
+
+    useEffect(() => {
+        const checkSession = () => {
+            if (submittedRef.current) return;
+            void fetch(`/student/sessions/${session.id}/status`, {
+                headers: { Accept: "application/json" },
+            })
+                .then((response) => (response.ok ? response.json() : null))
+                .then((data) => {
+                    if (typeof data?.locked === "boolean") {
+                        setLocked(data.locked);
+                        setLockedReason(data.locked ? data.locked_reason ?? null : null);
+                    }
+                    if (typeof data?.deadline === "number" && typeof data?.server_time === "number") {
+                        clockOffset.current = data.server_time - Date.now();
+                        setDeadline(data.deadline);
+                    }
+                })
+                .catch(() => {});
+        };
+        const timer = window.setInterval(checkSession, 2000);
+        return () => window.clearInterval(timer);
+    }, [session.id]);
 
     const submit = useCallback(() => {
         if (submittedRef.current) return;
@@ -166,8 +178,10 @@ export default function StudentExamWork({
             })
                 .then((response) => (response.ok ? response.json() : null))
                 .then((data) => {
-                    // Sistem mengunci ujian otomatis saat pelanggaran melewati batas.
-                    if (data?.locked) setLocked(true);
+                    if (typeof data?.locked === "boolean") {
+                        setLocked(data.locked);
+                        setLockedReason(data.locked ? data.locked_reason ?? null : null);
+                    }
                     return data;
                 })
                 .catch(() => null);
@@ -196,19 +210,6 @@ export default function StudentExamWork({
                 setFocusMode(false);
                 void reportSecurity("FULLSCREEN_EXIT", {
                     hint: "keluar dari mode layar penuh",
-                }).then((data) => {
-                    const count = data?.violation_count;
-                    if (
-                        typeof count !== "number" ||
-                        count < session.violation_flag_threshold ||
-                        lastViolationNoticeRef.current === count
-                    ) {
-                        return;
-                    }
-                    lastViolationNoticeRef.current = count;
-                    toast.warning(
-                        `Kamu sudah ${count}× keluar dari mode ujian. Pelanggaran ini dicatat untuk pengawas.`,
-                    );
                 });
             }
         };
@@ -247,7 +248,7 @@ export default function StudentExamWork({
             document.removeEventListener("paste", onPaste);
             document.removeEventListener("contextmenu", onContextMenu);
         };
-    }, [reportSecurity, session.violation_flag_threshold]);
+    }, [reportSecurity]);
 
     const enterExamMode = () => {
         document.documentElement.requestFullscreen?.().catch(() => {});
@@ -262,12 +263,12 @@ export default function StudentExamWork({
 
     useEffect(() => {
         const timer = setInterval(() => {
-            const left = session.deadline - (Date.now() + clockOffset.current);
+            const left = deadline - (Date.now() + clockOffset.current);
             setRemaining(left);
             if (left <= 0) submit();
         }, 1000);
         return () => clearInterval(timer);
-    }, [session.deadline, submit]);
+    }, [deadline, submit]);
 
     useEffect(() => {
         const handler = (event: BeforeUnloadEvent) => {
@@ -393,10 +394,9 @@ export default function StudentExamWork({
                                 Mode Layar Penuh Diperlukan
                             </h2>
                             <p className="text-sm text-muted-foreground leading-relaxed">
-                                Demi keamanan ujian, pengerjaan harus dilakukan
-                                dalam mode layar penuh. Setiap kali keluar dari
-                                mode ini akan dicatat sebagai pelanggaran oleh
-                                pengawas.
+                                Perpindahan tab/aplikasi atau keluar dari mode
+                                layar penuh akan langsung mengunci sesi ujian.
+                                Hubungi pengawas untuk membuka kunci.
                             </p>
                         </div>
                         <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 flex items-start gap-2 text-left">
@@ -417,7 +417,7 @@ export default function StudentExamWork({
                 </div>
             )}
 
-            {/* Overlay ujian terkunci karena kecurangan */}
+            {/* Overlay ujian yang dikunci pengawas */}
             {locked && !submittedRef.current && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-destructive/5 backdrop-blur-sm p-4">
                     <div className="w-full max-w-md space-y-6 rounded-2xl border-2 border-destructive bg-card p-8 text-center shadow-2xl">
@@ -429,28 +429,22 @@ export default function StudentExamWork({
                                 Ujian Terkunci
                             </h2>
                             <p className="text-sm text-muted-foreground leading-relaxed">
-                                Ujian kamu dikunci karena sistem mendeteksi
-                                pelanggaran keamanan yang berulang. Beritahu
-                                pengawas/guru kamu — hanya guru yang membuat
-                                ujian ini yang dapat membukanya.
+                                Ujian kamu dikunci oleh pengawas. Beritahu
+                                pengawas/guru kamu untuk meminta bantuan.
                             </p>
                         </div>
-                        {session.locked_reason && (
+                        {lockedReason && (
                             <p className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">
-                                {session.locked_reason}
+                                {lockedReason}
                             </p>
                         )}
                         <p className="text-xs text-muted-foreground">
                             Halaman akan terbuka otomatis setelah guru membuka
                             kuncinya.
                         </p>
-                        <Button
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => router.reload()}
-                        >
-                            Periksa Kembali
-                        </Button>
+                        <p className="text-xs text-muted-foreground">
+                            Status kunci diperiksa otomatis.
+                        </p>
                     </div>
                 </div>
             )}
@@ -718,14 +712,9 @@ export default function StudentExamWork({
                                     <ChevronRight className="size-4 ml-1" />
                                 </Button>
                             ) : (
-                                <Button
-                                    type="button"
-                                    onClick={() => setConfirmOpen(true)}
-                                    className="h-10 px-5 rounded-xl text-xs sm:text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                                >
-                                    <Send className="size-4 mr-1.5" />
-                                    Selesai & Kumpulkan
-                                </Button>
+                                <span className="rounded-xl border px-4 py-2 text-xs text-muted-foreground">
+                                    Jawaban dikumpulkan saat waktu habis
+                                </span>
                             )}
                         </div>
                     </div>
@@ -860,17 +849,9 @@ export default function StudentExamWork({
                             </div>
                         </div>
 
-                        {/* Tombol kumpulkan */}
-                        <div className="mt-auto pt-2">
-                            <Button
-                                type="button"
-                                className="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm transition-all"
-                                onClick={() => setConfirmOpen(true)}
-                            >
-                                <Send className="size-4 mr-2" />
-                                Kumpulkan Ujian
-                            </Button>
-                        </div>
+                        <p className="mt-auto pt-2 text-center text-xs text-muted-foreground">
+                            Jawaban dikumpulkan otomatis saat waktu ujian habis.
+                        </p>
                     </div>
                 </aside>
             </div>
@@ -917,43 +898,6 @@ export default function StudentExamWork({
                 </div>
             </div>
 
-            {/* Dialog konfirmasi kumpulkan */}
-            <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Kumpulkan ujian?</DialogTitle>
-                        <DialogDescription>
-                            {unansweredCount > 0
-                                ? `Masih ada ${unansweredCount} soal belum terjawab. Jawaban yang sudah tersimpan akan dinilai.`
-                                : "Semua soal sudah terjawab. Jawaban akan dinilai otomatis."}
-                        </DialogDescription>
-                    </DialogHeader>
-                    {unansweredCount > 0 && (
-                        <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 flex items-start gap-2 text-sm">
-                            <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                            <span className="text-amber-700 dark:text-amber-300">
-                                Soal yang tidak dijawab tidak mendapat nilai.
-                                Pastikan kamu sudah memeriksa semua soal.
-                            </span>
-                        </div>
-                    )}
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setConfirmOpen(false)}
-                        >
-                            Periksa Lagi
-                        </Button>
-                        <Button
-                            onClick={submit}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                        >
-                            <Send className="size-4 mr-1.5" />
-                            Ya, Kumpulkan
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </>
     );
 }

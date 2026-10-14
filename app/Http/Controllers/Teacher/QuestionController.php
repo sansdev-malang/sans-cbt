@@ -10,9 +10,11 @@ use App\Models\QuestionBank;
 use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Models\Teacher;
+use App\Services\QuestionBankCsvImporter;
 use App\Services\QuestionWriter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -67,6 +69,27 @@ class QuestionController extends Controller
 
         // Land on the new bank so questions can be added right away.
         return redirect()->route('teacher.question-banks.show', $bank);
+    }
+
+    public function importBankQuestions(
+        Request $request,
+        QuestionBank $questionBank,
+        QuestionBankCsvImporter $importer,
+    ): RedirectResponse {
+        $this->authorizeBank($request, $questionBank);
+        $request->validate(['file' => ['required', 'file', 'mimes:csv,txt', 'max:10240']]);
+        $file = $request->file('file');
+        abort_unless($file instanceof UploadedFile, 422);
+        $count = $importer->import($file, $questionBank);
+        Inertia::flash('toast', ['type' => 'success', 'message' => "{$count} soal berhasil diimpor."]);
+
+        return back();
+    }
+
+    public function questionImportTemplate(
+        QuestionBankCsvImporter $importer,
+    ): \Symfony\Component\HttpFoundation\StreamedResponse {
+        return $importer->downloadTemplate();
     }
 
     /**

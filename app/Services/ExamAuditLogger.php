@@ -19,7 +19,7 @@ class ExamAuditLogger
     public const SECURITY_EVENT_LEVELS = [
         'WINDOW_BLUR' => 'warning',
         'WINDOW_FOCUS' => 'info',
-        'FULLSCREEN_EXIT' => 'violation',
+        'FULLSCREEN_EXIT' => 'warning',
         'FULLSCREEN_ENTER' => 'info',
         'COPY_ATTEMPT' => 'warning',
         'PASTE_BLOCKED' => 'warning',
@@ -28,7 +28,7 @@ class ExamAuditLogger
     /**
      * Number of violations after which a session is flagged for the proctor.
      */
-    public const VIOLATION_FLAG_THRESHOLD = 3;
+    public const REVIEW_EVENT_THRESHOLD = 3;
 
     /**
      * Total violation-level audit logs recorded for a session.

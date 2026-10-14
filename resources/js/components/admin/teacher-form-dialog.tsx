@@ -61,7 +61,7 @@ export function TeacherFormDialog({
                                     id="teacher-unit"
                                     name="unit"
                                     defaultValue={teacher?.unit ?? 'sd'}
-                                    className="h-9 rounded-md border border-input bg-transparent px-3 text-sm font-medium"
+                                    className="h-9 rounded-md border border-input bg-background px-2 text-sm"
                                 >
                                     <option value="sd">Unit SD</option>
                                     <option value="smp">Unit SMP</option>
@@ -96,7 +96,7 @@ export function TeacherFormDialog({
                                     id="teacher-user"
                                     name="user_id"
                                     defaultValue={teacher?.user_id ?? ''}
-                                    className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+                                    className="h-9 rounded-md border border-input bg-background px-2 text-sm"
                                 >
                                     <option value="">Belum dihubungkan</option>
                                     {users.map((user) => (

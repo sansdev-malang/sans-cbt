@@ -22,11 +22,6 @@ export default function BarChart({
 }: Props) {
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-    const width = 560;
-    const padding = { top: 28, right: 16, bottom: 42, left: 40 };
-    const innerWidth = width - padding.left - padding.right;
-    const innerHeight = height - padding.top - padding.bottom;
-
     if (!items || items.length === 0) {
         return (
             <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
@@ -34,6 +29,12 @@ export default function BarChart({
             </div>
         );
     }
+
+    const categoryWidth = items.length > 10 ? 56 : 48;
+    const width = Math.max(560, items.length * categoryWidth);
+    const padding = { top: 28, right: 16, bottom: 42, left: 40 };
+    const innerWidth = width - padding.left - padding.right;
+    const innerHeight = height - padding.top - padding.bottom;
 
     const maxValue = Math.max(...items.map((it) => it.value), 0);
     // Find a clean upper bound for the Y axis
@@ -54,13 +55,14 @@ export default function BarChart({
         padding.top + innerHeight - (val / niceMax) * innerHeight;
 
     const colWidth = innerWidth / items.length;
-    const barWidth = Math.min(36, Math.max(16, colWidth * 0.55));
+    const barWidth = Math.min(32, Math.max(16, colWidth * 0.58));
 
     return (
-        <div className="relative w-full">
+        <div className="relative w-full overflow-x-auto">
             <svg
                 viewBox={`0 0 ${width} ${height}`}
-                className="w-full select-none overflow-visible"
+                className="block h-auto w-full min-w-full select-none"
+                style={{ minWidth: `${width}px` }}
                 role="img"
                 aria-label="Grafik Batang"
             >

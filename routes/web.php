@@ -58,8 +58,10 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::resource('teachers', AdminTeacherController::class)->except('show');
         Route::resource('questions', AdminQuestionController::class)->except(['create', 'edit']);
         Route::get('question-banks', fn () => redirect()->route('admin.questions.index'))->name('question-banks.index');
+        Route::get('question-banks/import-template', [AdminQuestionController::class, 'questionImportTemplate'])->name('question-banks.import-template');
         Route::get('question-banks/{questionBank}', [AdminQuestionController::class, 'showBank'])->name('question-banks.show');
         Route::post('question-banks', [AdminQuestionController::class, 'storeBank'])->name('question-banks.store');
+        Route::post('question-banks/{questionBank}/import', [AdminQuestionController::class, 'importBankQuestions'])->name('question-banks.import');
         Route::put('question-banks/{questionBank}', [AdminQuestionController::class, 'updateBank'])->name('question-banks.update');
         Route::delete('question-banks/{questionBank}', [AdminQuestionController::class, 'destroyBank'])->name('question-banks.destroy');
 
@@ -101,8 +103,10 @@ Route::middleware(['auth', 'verified', 'role:guru'])
         Route::put('questions/{question}', [TeacherQuestionController::class, 'update'])->name('questions.update');
         Route::delete('questions/{question}', [TeacherQuestionController::class, 'destroy'])->name('questions.destroy');
         Route::get('question-banks', fn () => redirect()->route('teacher.questions.index'))->name('question-banks.index');
+        Route::get('question-banks/import-template', [TeacherQuestionController::class, 'questionImportTemplate'])->name('question-banks.import-template');
         Route::get('question-banks/{questionBank}', [TeacherQuestionController::class, 'showBank'])->name('question-banks.show');
         Route::post('question-banks', [TeacherQuestionController::class, 'storeBank'])->name('question-banks.store');
+        Route::post('question-banks/{questionBank}/import', [TeacherQuestionController::class, 'importBankQuestions'])->name('question-banks.import');
         Route::put('question-banks/{questionBank}', [TeacherQuestionController::class, 'updateBank'])->name('question-banks.update');
         Route::delete('question-banks/{questionBank}', [TeacherQuestionController::class, 'destroyBank'])->name('question-banks.destroy');
 
@@ -111,6 +115,8 @@ Route::middleware(['auth', 'verified', 'role:guru'])
         Route::get('exams/{exam}/edit', [TeacherExamController::class, 'edit'])->name('exams.edit');
         Route::get('exams/{exam}/grading', [TeacherExamController::class, 'grading'])->name('exams.grading');
         Route::post('exams/{exam}/sessions/{session}/grade', [TeacherExamController::class, 'grade'])->name('exams.grade');
+        Route::post('exams/{exam}/sessions/{session}/lock', [TeacherExamController::class, 'lockSession'])->name('exams.lock-session');
+        Route::post('exams/{exam}/sessions/{session}/extend-time', [TeacherExamController::class, 'extendSessionTime'])->name('exams.extend-session-time');
         Route::post('exams/{exam}/sessions/{session}/unlock', [TeacherExamController::class, 'unlockSession'])->name('exams.unlock-session');
         Route::get('exams/{exam}/monitor', [TeacherExamController::class, 'monitor'])->name('exams.monitor');
         Route::get('exams/{exam}/sessions/{session}', [TeacherExamController::class, 'monitorSession'])->name('exams.monitor-session');
@@ -138,10 +144,11 @@ Route::middleware(['auth', 'verified', 'role:siswa'])
         Route::post('exams/{exam}/start', [StudentExamController::class, 'start'])->name('exams.start');
         Route::get('results', [StudentExamController::class, 'history'])->name('results.index');
         Route::get('sessions/{session}/work', [StudentExamController::class, 'work'])->name('exams.work');
+        Route::get('sessions/{session}/status', [StudentExamController::class, 'sessionStatus'])->middleware('throttle:exam-status')->name('exams.status');
         Route::get('sessions/{session}/result', [StudentExamController::class, 'result'])->name('exams.result');
         Route::post('sessions/{session}/submit', [StudentExamController::class, 'submit'])->name('exams.submit');
-        Route::post('sessions/{session}/answers', [StudentExamController::class, 'saveAnswer'])->name('exams.answer');
-        Route::post('sessions/{session}/security-events', [StudentExamController::class, 'securityEvent'])->name('exams.security');
+        Route::post('sessions/{session}/answers', [StudentExamController::class, 'saveAnswer'])->middleware('throttle:exam-answer')->name('exams.answer');
+        Route::post('sessions/{session}/security-events', [StudentExamController::class, 'securityEvent'])->middleware('throttle:exam-security')->name('exams.security');
     });
 
 require __DIR__.'/settings.php';

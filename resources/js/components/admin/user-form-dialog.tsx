@@ -36,7 +36,7 @@ export function UserFormDialog({
     const isEditing = user !== null;
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+            <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle>
                         {isEditing ? 'Ubah Pengguna' : 'Tambah Pengguna'}
@@ -48,88 +48,108 @@ export function UserFormDialog({
                     </DialogDescription>
                 </DialogHeader>
                 <Form
+                    key={isEditing ? `edit-${user.id}` : 'create'}
                     {...(isEditing
                         ? UserController.update.form(user.id)
                         : UserController.store.form())}
                     options={{ preserveScroll: true }}
                     onSuccess={() => onOpenChange(false)}
-                    className="space-y-5"
+                    className="flex min-h-0 flex-1 flex-col"
                 >
                     {({ processing, errors }) => (
                         <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="user-unit">Unit Sekolah</Label>
-                                <select
-                                    id="user-unit"
-                                    name="unit"
-                                    defaultValue={user?.unit ?? 'sd'}
-                                    className="h-9 rounded-md border border-input bg-transparent px-3 text-sm font-medium"
-                                >
-                                    <option value="sd">Unit SD</option>
-                                    <option value="smp">Unit SMP</option>
-                                </select>
-                                <InputError message={errors.unit} />
-                            </div>
-                            <Field
-                                id="user-name"
-                                label="Nama"
-                                name="name"
-                                required
-                                defaultValue={user?.name ?? ''}
-                                error={errors.name}
-                            />
-                            <Field
-                                id="user-email"
-                                label="Email"
-                                name="email"
-                                type="email"
-                                required
-                                defaultValue={user?.email ?? ''}
-                                error={errors.email}
-                            />
-                            <div className="grid gap-2">
-                                <Label htmlFor="user-role">Peran</Label>
-                                <select
-                                    id="user-role"
-                                    name="role"
-                                    required
-                                    defaultValue={user?.role ?? ''}
-                                    className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-                                >
-                                    <option value="" disabled>
-                                        Pilih peran
-                                    </option>
-                                    {roles.map((role) => (
+                            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="user-unit">Unit Sekolah</Label>
+                                    <select
+                                        id="user-unit"
+                                        name="unit"
+                                        defaultValue={user?.unit ?? 'sd'}
+                                        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground dark:scheme-dark"
+                                    >
                                         <option
-                                            key={role.value}
-                                            value={role.value}
+                                            className="bg-background text-foreground"
+                                            value="sd"
                                         >
-                                            {role.label}
+                                            Unit SD
                                         </option>
-                                    ))}
-                                </select>
-                                <InputError message={errors.role} />
+                                        <option
+                                            className="bg-background text-foreground"
+                                            value="smp"
+                                        >
+                                            Unit SMP
+                                        </option>
+                                    </select>
+                                    <InputError message={errors.unit} />
+                                </div>
+                                <Field
+                                    id="user-name"
+                                    label="Nama"
+                                    name="name"
+                                    required
+                                    defaultValue={user?.name ?? ''}
+                                    error={errors.name}
+                                />
+                                <Field
+                                    id="user-email"
+                                    label="Email"
+                                    name="email"
+                                    type="email"
+                                    required
+                                    defaultValue={user?.email ?? ''}
+                                    error={errors.email}
+                                />
+                                <div className="grid gap-2">
+                                    <Label htmlFor="user-role">Peran</Label>
+                                    <select
+                                        id="user-role"
+                                        name="role"
+                                        required
+                                        defaultValue={user?.role ?? ''}
+                                        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground dark:scheme-dark"
+                                    >
+                                        <option
+                                            className="bg-background text-foreground"
+                                            value=""
+                                            disabled
+                                        >
+                                            Pilih peran
+                                        </option>
+                                        {roles.map((role) => (
+                                            <option
+                                                key={role.value}
+                                                value={role.value}
+                                                className="bg-background text-foreground"
+                                            >
+                                                {role.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <InputError message={errors.role} />
+                                </div>
+                                <Field
+                                    id="user-password"
+                                    label={
+                                        isEditing
+                                            ? 'Kata sandi baru'
+                                            : 'Kata sandi'
+                                    }
+                                    name="password"
+                                    type="password"
+                                    required={!isEditing}
+                                    defaultValue=""
+                                    error={errors.password}
+                                />
+                                <Field
+                                    id="user-password-confirmation"
+                                    label="Konfirmasi kata sandi"
+                                    name="password_confirmation"
+                                    type="password"
+                                    required={!isEditing}
+                                    defaultValue=""
+                                />
                             </div>
-                            <Field
-                                id="user-password"
-                                label={
-                                    isEditing ? 'Kata sandi baru' : 'Kata sandi'
-                                }
-                                name="password"
-                                type="password"
-                                required={!isEditing}
-                                defaultValue=""
-                                error={errors.password}
-                            />
-                            <Field
-                                id="user-password-confirmation"
-                                label="Konfirmasi kata sandi"
-                                name="password_confirmation"
-                                type="password"
-                                required={!isEditing}
-                                defaultValue=""
-                            />
-                            <div className="flex justify-end gap-2">
+                            <div className="flex shrink-0 justify-end gap-2 border-t pt-4">
                                 <Button
                                     type="button"
                                     variant="outline"

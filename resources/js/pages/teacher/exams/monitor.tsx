@@ -1,4 +1,5 @@
 import { Head, Link, router } from "@inertiajs/react";
+import { Flag, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import Heading from "@/components/heading";
 import { Badge } from "@/components/ui/badge";
@@ -175,8 +176,8 @@ export default function TeacherExamMonitor({
                                     <th className="py-2 pr-4 font-medium">
                                         Sisa Waktu
                                     </th>
-                                    <th className="py-2 pr-4 font-medium">
-                                        Pelanggaran
+                                    <th className="min-w-47.5 py-2 pr-4 font-medium">
+                                        Catatan Keamanan
                                     </th>
                                     <th className="py-2 pr-4 font-medium">
                                         Aktivitas Terakhir
@@ -236,44 +237,36 @@ export default function TeacherExamMonitor({
                                             )}
                                         </td>
                                         <td className="py-3 pr-4">
-                                            {session.locked && (
-                                                <Badge
-                                                    variant="destructive"
-                                                    className="mb-1"
-                                                >
-                                                    🔒 Terkunci
-                                                </Badge>
-                                            )}
-                                            {session.flagged &&
-                                                !session.locked && (
-                                                    <Badge
-                                                        variant="destructive"
-                                                        className="mb-1"
-                                                    >
-                                                        ⚑ Perlu diperiksa
-                                                    </Badge>
+                                            <div className="flex min-w-42.5 flex-col items-start gap-1.5">
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    {session.locked && (
+                                                        <Badge variant="destructive" className="gap-1">
+                                                            <Lock className="h-3 w-3" />
+                                                            Terkunci
+                                                        </Badge>
+                                                    )}
+                                                    {session.flagged && !session.locked && (
+                                                        <Badge variant="destructive" className="gap-1">
+                                                            <Flag className="h-3 w-3" />
+                                                            Perlu diperiksa
+                                                        </Badge>
+                                                    )}
+                                                    {session.violations_count + session.warnings_count > 0 ? (
+                                                        <Badge variant="secondary">
+                                                            {session.violations_count + session.warnings_count} catatan
+                                                        </Badge>
+                                                    ) : (
+                                                        <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                                                            Tidak ada catatan
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {session.last_violation_label && (
+                                                    <span className="max-w-full truncate text-[11px] text-muted-foreground" title={session.last_violation_label}>
+                                                        {session.last_violation_label.replaceAll("_", " ")}
+                                                    </span>
                                                 )}
-                                            {session.violations_count > 0 ? (
-                                                <Badge variant="destructive">
-                                                    {session.violations_count}{" "}
-                                                    pelanggaran
-                                                    {session.last_violation_label
-                                                        ? ` · ${session.last_violation_label}`
-                                                        : ""}
-                                                </Badge>
-                                            ) : session.warnings_count > 0 ? (
-                                                <Badge variant="secondary">
-                                                    {session.warnings_count}{" "}
-                                                    peringatan
-                                                    {session.last_violation_label
-                                                        ? ` · ${session.last_violation_label}`
-                                                        : ""}
-                                                </Badge>
-                                            ) : (
-                                                <span className="text-emerald-600 dark:text-emerald-400">
-                                                    Bersih
-                                                </span>
-                                            )}
+                                            </div>
                                         </td>
                                         <td className="py-3 pr-4 text-muted-foreground">
                                             {session.last_activity_label}{" "}

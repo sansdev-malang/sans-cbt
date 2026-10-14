@@ -7,9 +7,11 @@ import {
     Plus,
     Search,
     Trash2,
+    Upload,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { DeleteConfirmationDialog } from "@/components/admin/delete-confirmation-dialog";
+import { QuestionBankImportDialog } from "@/components/admin/question-bank-import-dialog";
 import {
     AddQuestionDialog,
     BankDialog,
@@ -64,6 +66,7 @@ export default function QuestionBankDetailPage({
     const [editQuestion, setEditQuestion] = useState<BankQuestion | null>(null);
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [search, setSearch] = useState("");
+    const [importOpen, setImportOpen] = useState(false);
 
     const questions = useMemo(() => {
         const needle = search.trim().toLowerCase();
@@ -130,6 +133,10 @@ export default function QuestionBankDetailPage({
                     </div>
                 </div>
                 <div className="flex items-center gap-1.5">
+                    <Button variant="outline" onClick={() => setImportOpen(true)}>
+                        <Upload />
+                        Upload Soal
+                    </Button>
                     <Button onClick={() => setAddOpen(true)}>
                         <Plus />
                         Tambah Soal
@@ -188,7 +195,7 @@ export default function QuestionBankDetailPage({
                     )}
 
                     {bank.questions.length === 0 ? (
-                        <div className="mx-6 mb-6 flex flex-col items-center gap-2 rounded-lg border border-dashed p-8 text-center">
+                        <div className="m-6 flex flex-col items-center gap-2 rounded-xl border border-border bg-muted/20 p-8 text-center">
                             <p className="text-sm font-medium">
                                 Bank ini masih kosong
                             </p>
@@ -235,7 +242,7 @@ export default function QuestionBankDetailPage({
                                             <td className="px-6 py-3.5 text-muted-foreground">
                                                 {index + 1}
                                             </td>
-                                            <td className="max-w-[28rem] px-4 py-3.5">
+                                            <td className="max-w-md px-4 py-3.5">
                                                 {question.stimulus && (
                                                     <div className="mb-1">
                                                         <span className="inline-block text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
@@ -353,6 +360,12 @@ export default function QuestionBankDetailPage({
                     controller={controller}
                 />
             )}
+            <QuestionBankImportDialog
+                open={importOpen}
+                onOpenChange={setImportOpen}
+                importUrl={`/${isAdmin ? "admin" : "teacher"}/question-banks/${bank.id}/import`}
+                templateUrl={`/${isAdmin ? "admin" : "teacher"}/question-banks/import-template`}
+            />
             {editOpen && (
                 <BankDialog
                     open

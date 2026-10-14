@@ -1,10 +1,20 @@
 import { Head, Link, router } from "@inertiajs/react";
+import { Clock, LockOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 import TeacherExamController from "@/actions/App/Http/Controllers/Teacher/ExamController";
 import Heading from "@/components/heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
     QUESTION_TYPE_LABELS,
     type QuestionType,
@@ -26,6 +36,7 @@ type SessionDetail = {
     remaining_seconds: number;
     server_time: number;
     deadline: number;
+    extra_time_minutes: number;
     answered_count: number;
     questions_count: number;
     violations_count: number;
@@ -118,6 +129,10 @@ export default function TeacherMonitorDetail({
     exam: { id: number; name: string; subject: string; class: string };
     session: SessionDetail;
 }) {
+    const [extendTimeOpen, setExtendTimeOpen] = useState(false);
+    const [extensionMinutes, setExtensionMinutes] = useState("15");
+    const [extensionError, setExtensionError] = useState<string | null>(null);
+
     // Detail siswa diperbarui otomatis setiap 5 detik selama halaman terbuka.
     useEffect(() => {
         const timer = setInterval(() => {
@@ -136,6 +151,31 @@ export default function TeacherMonitorDetail({
                         description={`${exam.name} · ${exam.subject} · ${exam.class}`}
                     />
                     <div className="flex flex-wrap items-center gap-2">
+                        {(session.status === "ongoing" ||
+                            session.status === "expired") && (
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setExtensionError(null);
+                                    setExtendTimeOpen(true);
+                                }}
+                            >
+                                <Clock className="mr-2 size-4" />
+                                Tambah Waktu
+                            </Button>
+                        )}
+                        {!session.locked && session.status === "ongoing" && (
+                            <Button
+                                variant="destructive"
+                                onClick={() => {
+                                    if (window.confirm("Kunci sesi ujian siswa ini? Siswa perlu meminta bantuan pengawas untuk melanjutkan.")) {
+                                        router.post(`/teacher/exams/${exam.id}/sessions/${session.id}/lock`);
+                                    }
+                                }}
+                            >
+                                Kunci Ujian
+                            </Button>
+                        )}
                         {session.locked && (
                             <Button
                                 onClick={() =>
@@ -149,7 +189,8 @@ export default function TeacherMonitorDetail({
                                     )
                                 }
                             >
-                                🔓 Buka Kunci
+                                <LockOpen className="mr-2 h-4 w-4" />
+                                Buka Kunci
                             </Button>
                         )}
                         <Button asChild variant="outline">
@@ -163,12 +204,10 @@ export default function TeacherMonitorDetail({
                 {session.locked && (
                     <div className="rounded-lg border-2 border-destructive bg-destructive/10 p-4">
                         <p className="font-semibold text-destructive">
-                            🔒 Ujian siswa ini TERKUNCI karena pelanggaran
-                            keamanan.
+                            Ujian siswa ini dikunci oleh pengawas.
                         </p>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            {session.locked_reason ??
-                                "Sistem mendeteksi pelanggaran berulang."}{" "}
+                            {session.locked_reason ?? "Sesi dikunci oleh pengawas."}{" "}
                             Siswa tidak bisa melanjutkan sampai Anda membuka
                             kuncinya.
                         </p>
@@ -189,6 +228,11 @@ export default function TeacherMonitorDetail({
                             <p className="mt-2 text-xs text-muted-foreground">
                                 Mulai {session.started_at_label}
                             </p>
+                            {session.extra_time_minutes > 0 && (
+                                <p className="mt-1 text-xs font-medium text-primary">
+                                    Tambahan waktu {session.extra_time_minutes} menit
+                                </p>
+                            )}
                         </CardContent>
                     </Card>
                     <Card>
@@ -302,14 +346,14 @@ export default function TeacherMonitorDetail({
                     <Card className="lg:col-span-2">
                         <CardHeader>
                             <CardTitle className="flex items-center justify-between text-base font-medium">
-                                <span>Log Aktivitas &amp; Pelanggaran</span>
+                                <span>Log Aktivitas &amp; Catatan Keamanan</span>
                                 <span className="text-xs font-normal text-muted-foreground">
                                     Live · 5 dtk
                                 </span>
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="max-h-[32rem] space-y-1.5 overflow-y-auto">
+                            <div className="max-h-128 space-y-1.5 overflow-y-auto">
                                 {session.logs.map((log) => (
                                     <div
                                         key={log.id}
@@ -349,6 +393,74 @@ export default function TeacherMonitorDetail({
                     </Card>
                 </div>
             </div>
+            <Dialog open={extendTimeOpen} onOpenChange={setExtendTimeOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Tambah waktu ujian</DialogTitle>
+                        <DialogDescription>
+                            Tambahan waktu berlaku untuk siswa ini saja. Siswa
+                            yang sudah kehabisan waktu akan dibuka kembali
+                            otomatis.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {session.status === "expired" && (
+                        <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-300">
+                            Nilai sementara dari sesi yang habis waktu akan
+                            dihapus dan dihitung ulang setelah siswa
+                            mengumpulkan kembali.
+                        </p>
+                    )}
+                    <div className="space-y-2">
+                        <label
+                            htmlFor="extra-time-minutes"
+                            className="text-sm font-medium"
+                        >
+                            Tambahan waktu (menit)
+                        </label>
+                        <Input
+                            id="extra-time-minutes"
+                            type="number"
+                            min={1}
+                            max={120}
+                            value={extensionMinutes}
+                            onChange={(event) => setExtensionMinutes(event.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Masukkan 1–120 menit.
+                        </p>
+                        {extensionError && (
+                            <p className="text-sm text-destructive">{extensionError}</p>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setExtendTimeOpen(false)}>
+                            Batal
+                        </Button>
+                        <Button
+                            disabled={
+                                !Number.isInteger(Number(extensionMinutes)) ||
+                                Number(extensionMinutes) < 1 ||
+                                Number(extensionMinutes) > 120
+                            }
+                            onClick={() => {
+                                router.post(
+                                    `/teacher/exams/${exam.id}/sessions/${session.id}/extend-time`,
+                                    { minutes: Number(extensionMinutes) },
+                                    {
+                                        onSuccess: () => setExtendTimeOpen(false),
+                                        onError: (errors) =>
+                                            setExtensionError(
+                                                Object.values(errors).join(" "),
+                                            ),
+                                    },
+                                );
+                            }}
+                        >
+                            Berikan Waktu
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

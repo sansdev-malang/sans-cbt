@@ -29,7 +29,7 @@ export type BankOption = {
     material: string | null;
     questions: BankQuestion[];
 };
-type ExamValues = {
+export type ExamValues = {
     name: string;
     description: string | null;
     subject_id: number | null;
@@ -58,6 +58,7 @@ export function ExamForm({
     backHref,
     bare = false,
     onCancel,
+    onSuccess,
 }: {
     action: RouteFormDefinition<'post' | 'put' | 'patch'>;
     headingTitle: string;
@@ -69,6 +70,7 @@ export function ExamForm({
     backHref?: string;
     bare?: boolean;
     onCancel?: () => void;
+    onSuccess?: () => void;
 }) {
     const [subjectId, setSubjectId] = useState(
         exam?.subject_id ? String(exam.subject_id) : '',
@@ -106,6 +108,7 @@ export function ExamForm({
         <Form
             {...action}
             options={{ preserveScroll: true }}
+            onSuccess={() => onSuccess?.()}
             className={bare ? 'flex min-h-0 flex-1 flex-col' : 'space-y-5'}
         >
             {({ processing, errors }) => (

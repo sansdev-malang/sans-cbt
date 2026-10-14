@@ -14,7 +14,8 @@ type OngoingSession = {
     answered_count: number;
     started_at_label: string;
     remaining_minutes: number;
-    violations_count: number;
+    locked: boolean;
+    security_notes_count: number;
     flagged: boolean;
 };
 type ViolationRow = {
@@ -27,6 +28,7 @@ type ViolationRow = {
 };
 
 const LEVEL_VARIANT: Record<string, 'secondary' | 'destructive'> = {
+    warning: 'secondary',
     violation: 'destructive',
     critical: 'destructive',
 };
@@ -54,7 +56,7 @@ export default function AdminExamMonitoringIndex({
             <div className="flex h-full flex-1 flex-col gap-4 p-4">
                 <Heading
                     title="Monitoring Ujian"
-                    description="Sesi ujian yang sedang berlangsung dan pelanggaran keamanan terbaru."
+                    description="Sesi ujian yang sedang berlangsung dan catatan keamanan untuk ditinjau."
                 />
 
                 <div className="grid gap-4 sm:grid-cols-3">
@@ -101,7 +103,7 @@ export default function AdminExamMonitoringIndex({
                                         Sisa ±
                                     </th>
                                     <th className="py-2 font-medium">
-                                        Pelanggaran
+                                        Catatan Keamanan
                                     </th>
                                 </tr>
                             </thead>
@@ -132,16 +134,20 @@ export default function AdminExamMonitoringIndex({
                                             {session.remaining_minutes} mnt
                                         </td>
                                         <td className="py-3">
-                                            {session.flagged ? (
+                                            {session.locked ? (
+                                                <Badge variant="destructive">
+                                                    Terkunci · {session.security_notes_count} catatan
+                                                </Badge>
+                                            ) : session.flagged ? (
                                                 <Badge
                                                     variant="destructive"
                                                     className="gap-1"
                                                 >
-                                                    ⚑ {session.violations_count}
+                                                    {session.security_notes_count} catatan untuk ditinjau
                                                 </Badge>
-                                            ) : session.violations_count > 0 ? (
+                                            ) : session.security_notes_count > 0 ? (
                                                 <Badge variant="secondary">
-                                                    {session.violations_count}
+                                                    {session.security_notes_count}
                                                 </Badge>
                                             ) : (
                                                 <span className="text-muted-foreground">
@@ -170,7 +176,7 @@ export default function AdminExamMonitoringIndex({
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-base font-medium">
-                            Pelanggaran Terbaru
+                            Catatan Keamanan Terbaru
                         </CardTitle>
                     </CardHeader>
                     <CardContent>

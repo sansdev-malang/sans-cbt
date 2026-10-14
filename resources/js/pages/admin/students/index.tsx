@@ -269,8 +269,14 @@ export default function AdminStudentsIndex({
                         />
                     </CardContent>
                 </Card>
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                    <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+                <Dialog
+                    open={dialogOpen}
+                    onOpenChange={(open) => {
+                        setDialogOpen(open);
+                        if (!open) setSelectedStudent(null);
+                    }}
+                >
+                    <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden">
                         <DialogHeader>
                             <DialogTitle>
                                 {selectedStudent
@@ -282,6 +288,11 @@ export default function AdminStudentsIndex({
                             </DialogDescription>
                         </DialogHeader>
                         <StudentForm
+                            key={
+                                selectedStudent
+                                    ? `edit-${selectedStudent.id}`
+                                    : 'create'
+                            }
                             action={
                                 selectedStudent
                                     ? StudentController.update.form(
@@ -292,7 +303,11 @@ export default function AdminStudentsIndex({
                             student={selectedStudent ?? emptyStudent}
                             classes={classes}
                             users={users}
-                            onSuccess={() => setDialogOpen(false)}
+                            inDialog
+                            onSuccess={() => {
+                                setDialogOpen(false);
+                                setSelectedStudent(null);
+                            }}
                             onCancel={() => setDialogOpen(false)}
                         />
                     </DialogContent>

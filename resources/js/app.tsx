@@ -4,6 +4,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
 import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
+import AuthCenteredLayout from '@/layouts/auth/auth-centered-layout';
+import AuthConfirmationLayout from '@/layouts/auth/auth-confirmation-layout';
 import ExamLayout from '@/layouts/exam-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 
@@ -15,6 +17,10 @@ void createInertiaApp({
         switch (true) {
             case name === 'welcome':
                 return null;
+            case name === 'auth/login':
+                return AuthCenteredLayout;
+            case name === 'auth/confirm-password':
+                return AuthConfirmationLayout;
             case name === 'student/exams/work':
                 return ExamLayout;
             case name.startsWith('auth/'):

@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $student_id
  * @property Carbon $started_at
  * @property Carbon|null $submitted_at
+ * @property int $extra_time_minutes
  * @property string $status
  * @property bool $is_preview
  * @property Carbon|null $locked_at
@@ -26,7 +27,7 @@ use Illuminate\Support\Carbon;
  * @property-read Exam $exam
  * @property-read Student|null $student
  */
-#[Fillable(['exam_id', 'student_id', 'started_at', 'submitted_at', 'status', 'is_preview', 'locked_at', 'locked_reason', 'random_seed', 'question_order'])]
+#[Fillable(['exam_id', 'student_id', 'started_at', 'submitted_at', 'extra_time_minutes', 'status', 'is_preview', 'locked_at', 'locked_reason', 'random_seed', 'question_order'])]
 class ExamSession extends Model
 {
     /**
@@ -41,6 +42,7 @@ class ExamSession extends Model
             'submitted_at' => 'datetime',
             'locked_at' => 'datetime',
             'random_seed' => 'integer',
+            'extra_time_minutes' => 'integer',
             'question_order' => 'array',
             'is_preview' => 'boolean',
         ];
@@ -87,7 +89,8 @@ class ExamSession extends Model
      */
     public function deadline(): Carbon
     {
-        return \Illuminate\Support\Carbon::instance($this->started_at)->addMinutes($this->exam->duration_minutes);
+        return \Illuminate\Support\Carbon::instance($this->started_at)
+            ->addMinutes($this->exam->duration_minutes + $this->extra_time_minutes);
     }
 
     public function isExpired(): bool

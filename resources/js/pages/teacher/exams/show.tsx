@@ -3,6 +3,14 @@ import { useState } from "react";
 import TeacherExamController from "@/actions/App/Http/Controllers/Teacher/ExamController";
 import { DeleteConfirmationDialog } from "@/components/admin/delete-confirmation-dialog";
 import { QUESTION_TYPE_LABELS } from "@/components/admin/question-form-fields";
+import { ExamForm, type BankOption, type ExamValues, type Option } from "./form";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import Heading from "@/components/heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,8 +78,21 @@ const STATUS_VARIANT: Record<
     finished: "outline",
 };
 
-export default function TeacherExamShow({ exam }: { exam: Exam }) {
+export default function TeacherExamShow({
+    exam,
+    editExam,
+    subjects,
+    classes,
+    banks,
+}: {
+    exam: Exam;
+    editExam: ExamValues;
+    subjects: Option[];
+    classes: Option[];
+    banks: BankOption[];
+}) {
     const [deleteOpen, setDeleteOpen] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
 
     const togglePublish = () => {
         const action = exam.is_published
@@ -146,12 +167,8 @@ export default function TeacherExamShow({ exam }: { exam: Exam }) {
                                 </Link>
                             </Button>
                         )}
-                        <Button asChild variant="outline">
-                            <Link
-                                href={TeacherExamController.edit.url(exam.id)}
-                            >
-                                Edit
-                            </Link>
+                        <Button variant="outline" onClick={() => setEditOpen(true)}>
+                            Edit Ujian
                         </Button>
                         <Button
                             variant={exam.is_published ? "outline" : "default"}
@@ -268,6 +285,28 @@ export default function TeacherExamShow({ exam }: { exam: Exam }) {
                     itemName={exam.name}
                     onConfirm={destroy}
                 />
+                <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                    <DialogContent className="flex h-[min(90dvh,56rem)] max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+                        <DialogHeader className="shrink-0 border-b px-6 py-5 pr-12">
+                            <DialogTitle>Edit Ujian</DialogTitle>
+                            <DialogDescription>
+                                Perbarui data, soal, jadwal, dan pengaturan ujian.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <ExamForm
+                            bare
+                            action={TeacherExamController.update.form(exam.id)}
+                            headingTitle="Edit Ujian"
+                            headingDescription=""
+                            exam={editExam}
+                            subjects={subjects}
+                            classes={classes}
+                            banks={banks}
+                            onCancel={() => setEditOpen(false)}
+                            onSuccess={() => setEditOpen(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
             </div>
         </>
     );

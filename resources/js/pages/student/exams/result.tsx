@@ -1,10 +1,14 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import { useEffect } from 'react';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { QUESTION_TYPE_LABELS } from '@/components/admin/question-form-fields';
-import { index as studentExamsIndex } from '@/routes/student/exams';
+import {
+    index as studentExamsIndex,
+    work as studentExamWork,
+} from '@/routes/student/exams';
 
 type Detail = {
     question_id: number;
@@ -42,6 +46,25 @@ export default function StudentExamResult({
         details: Detail[];
     } | null;
 }) {
+    useEffect(() => {
+        if (session.status !== 'expired') return;
+
+        const timer = window.setInterval(() => {
+            void fetch(`/student/sessions/${session.id}/status`, {
+                headers: { Accept: 'application/json' },
+            })
+                .then((response) => response.ok ? response.json() : null)
+                .then((data) => {
+                    if (data?.status === 'ongoing') {
+                        router.visit(studentExamWork.url({ session: session.id }));
+                    }
+                })
+                .catch(() => {});
+        }, 2000);
+
+        return () => window.clearInterval(timer);
+    }, [session.id, session.status]);
+
     return (
         <>
             <Head title="Hasil Ujian" />
@@ -50,6 +73,15 @@ export default function StudentExamResult({
                     title="Hasil Ujian"
                     description={`${session.exam_name} · ${session.subject}`}
                 />
+
+                {session.status === 'expired' && (
+                    <Card>
+                        <CardContent className="pt-5 text-sm text-muted-foreground">
+                            Waktu ujian habis. Jika guru memberi tambahan waktu,
+                            halaman pengerjaan akan terbuka kembali otomatis.
+                        </CardContent>
+                    </Card>
+                )}
 
                 {result === null ? (
                     <Card>

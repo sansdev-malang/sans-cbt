@@ -258,3 +258,39 @@
         sans-serif;
     line-height: 1.9; /* beri ruang harakat & taling untuk aksara Jawa/Arab */
 }
+
+.landing-mesh {
+    background-color: #08172d;
+    background-image:
+        radial-gradient(ellipse at 18% 22%, rgba(29, 78, 216, 0.58), transparent 42%),
+        radial-gradient(ellipse at 84% 25%, rgba(14, 116, 196, 0.54), transparent 40%),
+        radial-gradient(ellipse at 62% 88%, rgba(8, 145, 178, 0.42), transparent 42%),
+        linear-gradient(130deg, #07162d 0%, #102c50 52%, #0a2038 100%);
+    background-size: 140% 140%;
+    animation: landing-mesh-drift 28s ease-in-out infinite alternate;
+}
+
+.landing-mesh::after {
+    position: absolute;
+    z-index: 0;
+    pointer-events: none;
+    inset: 0;
+    content: '';
+    opacity: 0.1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+}
+
+@keyframes landing-mesh-drift {
+    from {
+        background-position: 0% 0%;
+    }
+    to {
+        background-position: 100% 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .landing-mesh {
+        animation: none;
+    }
+}

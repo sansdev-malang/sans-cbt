@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -82,6 +83,19 @@ class ExamController extends Controller
         $participantCount = $exam->schoolClass->students()->count();
 
         return Inertia::render('teacher/exams/show', [
+            ...$this->formOptions($request),
+            'editExam' => [
+                'name' => $exam->name,
+                'description' => $exam->description,
+                'subject_id' => $exam->subject_id,
+                'school_class_id' => $exam->school_class_id,
+                'started_at' => $exam->started_at->format('Y-m-d\\TH:i'),
+                'duration_minutes' => $exam->duration_minutes,
+                'shuffle_questions' => $exam->shuffle_questions,
+                'shuffle_options' => $exam->shuffle_options,
+                'show_result_immediately' => $exam->show_result_immediately,
+                'question_ids' => $exam->questions->pluck('id')->all(),
+            ],
             'exam' => [...$this->examPayload($exam), 'description' => $exam->description, 'participants_count' => $participantCount,
                 'has_essay' => $exam->questions()->where('type', 'essay')->exists(),
                 'has_pending_essays' => $exam->realSessions()
@@ -426,7 +440,7 @@ class ExamController extends Controller
                     'last_activity_label' => $lastActivity ? Carbon::instance($lastActivity)->translatedFormat('H:i:s') : '—',
                     'violations_count' => $session->violations_count,
                     'warnings_count' => $session->warnings_count,
-                    'flagged' => $session->violations_count >= ExamAuditLogger::VIOLATION_FLAG_THRESHOLD,
+                    'flagged' => $session->warnings_count >= ExamAuditLogger::REVIEW_EVENT_THRESHOLD,
                     'last_violation_label' => $lastViolation?->event_type,
                 ];
             })
@@ -446,9 +460,91 @@ class ExamController extends Controller
         ]);
     }
 
-    /**
-     * Unlock a cheating-locked session. Only the exam's own teacher may do this.
-     */
+    /** Lock an active session after a teacher reviews its security notes. */
+    public function lockSession(Request $request, Exam $exam, ExamSession $session): RedirectResponse
+    {
+        $this->authorizeExam($request, $exam);
+        abort_unless($session->exam_id === $exam->id, 404);
+        abort_unless($session->status === 'ongoing', 409);
+
+        $validated = $request->validate(['reason' => ['nullable', 'string', 'max:255']]);
+        $this->audit->lock($session, $validated['reason'] ?? 'Dikunci manual oleh guru untuk ditinjau.');
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Sesi {$session->student->full_name} dikunci untuk ditinjau."]);
+
+        return back();
+    }
+
+    /** Grant extra time to one student's attempt, including an automatic timeout. */
+    public function extendSessionTime(Request $request, Exam $exam, ExamSession $session): RedirectResponse
+    {
+        $this->authorizeExam($request, $exam);
+        abort_unless($session->exam_id === $exam->id, 404);
+
+        $validated = $request->validate([
+            'minutes' => ['required', 'integer', 'min:1', 'max:120'],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+        $teacher = $request->user();
+
+        DB::transaction(function () use ($session, $validated, $teacher): void {
+            $lockedSession = ExamSession::query()
+                ->whereKey($session->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $reopening = $lockedSession->status === 'expired'
+                || ($lockedSession->status === 'ongoing' && $lockedSession->isExpired());
+            abort_unless($lockedSession->status === 'ongoing' || $lockedSession->status === 'expired', 409);
+
+            if ($reopening) {
+                if ($lockedSession->status === 'expired'
+                    && ! $lockedSession->auditLogs()->where('event_type', 'TIME_EXPIRED')->exists()) {
+                    throw ValidationException::withMessages(['minutes' => 'Sesi ini tidak berakhir karena waktu habis.']);
+                }
+
+                $result = $lockedSession->result()->with('details.question')->first();
+                $hasGradedEssay = $result?->details->contains(
+                    fn ($detail) => $detail->question?->type === 'essay' && $detail->graded_at !== null,
+                ) ?? false;
+                if ($hasGradedEssay) {
+                    throw ValidationException::withMessages(['minutes' => 'Waktu tidak dapat ditambah karena jawaban esai sudah dinilai.']);
+                }
+
+                // Remove the timeout score snapshot so answers can be scored again after the extension.
+                $result?->delete();
+            }
+
+            $deadline = $lockedSession->deadline();
+            $minutesPastDeadline = max(0, (int) ceil((now()->getTimestamp() - $deadline->getTimestamp()) / 60));
+            $addedMinutes = (int) $validated['minutes'] + $minutesPastDeadline;
+
+            $lockedSession->update([
+                'status' => 'ongoing',
+                'submitted_at' => null,
+                'extra_time_minutes' => $lockedSession->extra_time_minutes + $addedMinutes,
+            ]);
+
+            $this->audit->log(
+                $teacher,
+                $lockedSession->exam_id,
+                $lockedSession->id,
+                'TIME_EXTENSION_GRANTED',
+                'info',
+                [
+                    'minutes' => (int) $validated['minutes'],
+                    'reason' => $validated['reason'] ?? null,
+                    'reopened_after_timeout' => $reopening,
+                ],
+            );
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Tambahan waktu {$validated['minutes']} menit diberikan kepada {$session->student->full_name}."]);
+
+        return back();
+    }
+
+    /** Unlock a session after reviewing it. Only the exam's own teacher may do this. */
     public function unlockSession(Request $request, Exam $exam, ExamSession $session): RedirectResponse
     {
         $this->authorizeExam($request, $exam);
@@ -520,6 +616,7 @@ class ExamController extends Controller
                 'remaining_seconds' => $session->status === 'ongoing' ? max(0, now()->diffInSeconds($session->deadline(), false)) : 0,
                 'server_time' => now()->getTimestampMs(),
                 'deadline' => $session->deadline()->getTimestampMs(),
+                'extra_time_minutes' => $session->extra_time_minutes,
                 'answered_count' => $answeredCount,
                 'questions_count' => count($questions),
                 'violations_count' => $session->auditLogs()->whereIn('level', ['violation', 'critical'])->where('event_type', '!=', 'SESSION_LOCKED')->count(),

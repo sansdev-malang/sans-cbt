@@ -8,11 +8,15 @@ use App\Models\Exam;
 use App\Models\ExamSession;
 use App\Models\Student;
 use App\Services\ExamAuditLogger;
+use App\Services\ExamAnswerValidator;
 use App\Services\ExamRandomizer;
 use App\Services\ExamScorer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -152,10 +156,10 @@ class ExamController extends Controller
                 'subject' => $exam->subject->name,
                 'server_time' => now()->getTimestampMs(),
                 'deadline' => $session->deadline()->getTimestampMs(),
+                'extra_time_minutes' => $session->extra_time_minutes,
                 'locked' => $session->isLocked(),
                 'locked_reason' => $session->locked_reason,
                 'started_at_label' => $session->started_at->translatedFormat('d M Y H:i'),
-                'violation_flag_threshold' => ExamAuditLogger::VIOLATION_FLAG_THRESHOLD,
             ],
             'questions' => $questions,
             'answers' => $answers,
@@ -165,42 +169,54 @@ class ExamController extends Controller
     /**
      * Autosave endpoint. Accepts JSON; enforces the server deadline on every call.
      */
-    public function saveAnswer(Request $request, ExamSession $session): JsonResponse|RedirectResponse
+    public function saveAnswer(
+        Request $request,
+        ExamSession $session,
+        ExamAnswerValidator $answerValidator,
+    ): JsonResponse|RedirectResponse
     {
         $this->authorizeSession($request, $session);
 
         $validated = $request->validate([
             'question_id' => ['required', 'integer'],
-            'value' => ['nullable', 'array'],
+            'value' => ['nullable', 'array', 'max:1'],
         ]);
 
-        $isExamQuestion = $session->exam->questions()->whereKey($validated['question_id'])->exists();
-        if (! $isExamQuestion) {
-            abort(422, 'Soal tidak termasuk dalam ujian ini.');
-        }
+        return DB::transaction(function () use ($session, $validated, $answerValidator): JsonResponse {
+            $lockedSession = ExamSession::query()->whereKey($session->id)->lockForUpdate()->firstOrFail();
 
-        if ($session->status !== 'ongoing') {
-            return response()->json(['ok' => false, 'reason' => 'submitted'], 409);
-        }
+            if ($lockedSession->status !== 'ongoing') {
+                return response()->json(['ok' => false, 'reason' => 'submitted'], 409);
+            }
 
-        if ($session->isLocked()) {
-            return response()->json(['ok' => false, 'reason' => 'locked'], 409);
-        }
+            if ($lockedSession->isExpired()) {
+                $this->finalize($lockedSession, 'expired');
 
-        if ($session->isExpired()) {
-            $this->finalize($session, 'expired');
+                return response()->json(['ok' => false, 'reason' => 'expired'], 409);
+            }
 
-            return response()->json(['ok' => false, 'reason' => 'expired'], 409);
-        }
+            if ($lockedSession->isLocked()) {
+                return response()->json(['ok' => false, 'reason' => 'locked'], 409);
+            }
 
-        Answer::query()->updateOrCreate(
-            ['exam_session_id' => $session->id, 'question_id' => $validated['question_id']],
-            ['value' => $validated['value']],
-        );
+            $question = $lockedSession->exam->questions()
+                ->with(['options', 'pairs'])
+                ->whereKey($validated['question_id'])
+                ->first();
 
-        $this->audit->forSession($session, 'ANSWER_SAVED', 'info', ['question_id' => (int) $validated['question_id']]);
+            if ($question === null || ! in_array($question->id, $lockedSession->question_order, true)) {
+                abort(422, 'Soal tidak termasuk dalam sesi ujian ini.');
+            }
 
-        return response()->json(['ok' => true, 'saved_at' => now()->getTimestampMs()]);
+            $answerValidator->validate($question, $validated['value'] ?? null);
+
+            Answer::query()->updateOrCreate(
+                ['exam_session_id' => $lockedSession->id, 'question_id' => $question->id],
+                ['value' => $validated['value'] ?? null],
+            );
+
+            return response()->json(['ok' => true, 'saved_at' => now()->getTimestampMs()]);
+        });
     }
 
     /**
@@ -212,31 +228,53 @@ class ExamController extends Controller
         $this->authorizeSession($request, $session);
 
         $validated = $request->validate([
-            'type' => ['required', 'string'],
-            'metadata' => ['nullable', 'array'],
+            'type' => ['required', 'string', Rule::in(array_keys(ExamAuditLogger::SECURITY_EVENT_LEVELS))],
+            'metadata' => ['nullable', 'array', 'max:8'],
         ]);
 
-        if ($session->status !== 'ongoing' || $session->isExpired()) {
-            return response()->json(['ok' => true, 'recorded' => false, 'locked' => $session->isLocked(), 'violation_count' => $this->audit->violationCount($session)]);
+        $metadata = $validated['metadata'] ?? [];
+        if (collect($metadata)->contains(fn ($value) => ! is_scalar($value) && $value !== null)
+            || strlen(json_encode($metadata) ?: '') > 1024) {
+            throw ValidationException::withMessages(['metadata' => 'Metadata kejadian keamanan terlalu besar atau tidak valid.']);
         }
 
-        $logged = $this->audit->securityEvent($session, $validated['type'], $validated['metadata'] ?? []);
+        return DB::transaction(function () use ($session, $validated, $metadata): JsonResponse {
+            $lockedSession = ExamSession::query()->whereKey($session->id)->lockForUpdate()->firstOrFail();
 
-        // Anti-cheating: lock the exam once violations cross the threshold.
-        // Only the exam's own teacher can unlock it afterwards.
-        $level = ExamAuditLogger::SECURITY_EVENT_LEVELS[$validated['type']] ?? null;
-        $justLocked = false;
-        if (in_array($level, ['violation', 'critical'], true) && $this->audit->violationCount($session) >= ExamAuditLogger::VIOLATION_FLAG_THRESHOLD) {
-            $this->audit->lock($session, "Terdeteksi {$this->audit->violationCount($session)} pelanggaran selama ujian.");
-            $justLocked = true;
-        }
+            if ($lockedSession->status !== 'ongoing' || $lockedSession->isExpired()) {
+                return response()->json(['ok' => true, 'recorded' => false, 'locked' => $lockedSession->isLocked()]);
+            }
+
+            $logged = $this->audit->securityEvent($lockedSession, $validated['type'], $metadata);
+            $autoLockEvent = in_array($validated['type'], ['WINDOW_BLUR', 'FULLSCREEN_EXIT'], true);
+            if ($autoLockEvent && ! $lockedSession->isLocked()) {
+                $reason = $validated['type'] === 'FULLSCREEN_EXIT'
+                    ? 'Sesi dikunci otomatis karena siswa keluar dari mode layar penuh.'
+                    : 'Sesi dikunci otomatis karena siswa berpindah fokus dari halaman ujian.';
+                $this->audit->lock($lockedSession, $reason);
+            }
+
+            return response()->json([
+                'ok' => true,
+                'recorded' => $logged !== null,
+                'locked' => $lockedSession->fresh()->isLocked(),
+                'locked_reason' => $lockedSession->fresh()->locked_reason,
+            ]);
+        });
+    }
+
+    /** Let the student screen learn when a teacher manually locks the session. */
+    public function sessionStatus(Request $request, ExamSession $session): JsonResponse
+    {
+        $this->authorizeSession($request, $session);
 
         return response()->json([
-            'ok' => true,
-            'recorded' => $logged !== null,
-            'locked' => $session->fresh()->isLocked(),
-            'just_locked' => $justLocked,
-            'violation_count' => $this->audit->violationCount($session),
+            'status' => $session->status,
+            'locked' => $session->isLocked(),
+            'locked_reason' => $session->locked_reason,
+            'server_time' => now()->getTimestampMs(),
+            'deadline' => $session->deadline()->getTimestampMs(),
+            'extra_time_minutes' => $session->extra_time_minutes,
         ]);
     }
 
@@ -247,14 +285,33 @@ class ExamController extends Controller
     {
         $this->authorizeSession($request, $session);
 
-        if ($session->status === 'ongoing') {
-            $expired = $session->isExpired();
-            $session->update([
+        $notExpired = DB::transaction(function () use ($session): bool {
+            $lockedSession = ExamSession::query()->whereKey($session->id)->lockForUpdate()->firstOrFail();
+
+            if ($lockedSession->status !== 'ongoing') {
+                return false;
+            }
+
+            $expired = $lockedSession->isExpired();
+            if (! $expired && $lockedSession->isLocked()) {
+                abort(423, 'Sesi ujian terkunci. Hubungi guru atau pengawas untuk meninjau sesi ini.');
+            }
+            if (! $expired) {
+                return true;
+            }
+
+            $lockedSession->update([
                 'status' => $expired ? 'expired' : 'submitted',
                 'submitted_at' => now(),
             ]);
-            $this->scorer->score($session);
-            $this->audit->forSession($session, $expired ? 'TIME_EXPIRED' : 'SUBMIT_EXAM', 'info', ['manual' => ! $expired]);
+            $this->scorer->score($lockedSession);
+            $this->audit->forSession($lockedSession, 'TIME_EXPIRED', 'info', ['manual' => false]);
+
+            return false;
+        });
+
+        if ($notExpired) {
+            return redirect()->route('student.exams.work', $session);
         }
 
         return redirect()->route('student.exams.result', $session);
@@ -263,9 +320,13 @@ class ExamController extends Controller
     /**
      * Result page; the score and review are gated by the exam's result policy.
      */
-    public function result(Request $request, ExamSession $session): Response
+    public function result(Request $request, ExamSession $session): Response|RedirectResponse
     {
         $this->authorizeSession($request, $session);
+
+        if ($session->status === 'ongoing') {
+            return redirect()->route('student.exams.work', $session);
+        }
 
         $exam = $session->exam->load('subject:id,name');
         $result = $session->result;

@@ -24,8 +24,9 @@ class ExamMonitorController extends Controller
             ->orderBy('started_at')
             ->get()
             ->map(function (ExamSession $session): array {
-                $violationsCount = $session->auditLogs()
-                    ->whereIn('level', ['violation', 'critical'])
+                $securityNotesCount = $session->auditLogs()
+                    ->whereIn('level', ['warning', 'violation', 'critical'])
+                    ->where('event_type', '!=', 'SESSION_LOCKED')
                     ->count();
 
                 return [
@@ -36,14 +37,15 @@ class ExamMonitorController extends Controller
                     'answered_count' => $session->answers->count(),
                     'started_at_label' => $session->started_at->translatedFormat('d M Y H:i'),
                     'remaining_minutes' => max(0, (int) ceil(now()->diffInMinutes($session->deadline(), false))),
-                    'violations_count' => $violationsCount,
-                    'flagged' => $violationsCount >= ExamAuditLogger::VIOLATION_FLAG_THRESHOLD,
+                    'locked' => $session->isLocked(),
+                    'security_notes_count' => $securityNotesCount,
+                    'flagged' => $securityNotesCount >= ExamAuditLogger::REVIEW_EVENT_THRESHOLD,
                 ];
             })
             ->all();
 
         $recentViolations = AuditLog::query()
-            ->whereIn('level', ['violation', 'critical'])
+            ->whereIn('level', ['warning', 'violation', 'critical'])
             ->with(['user:id,name', 'exam:id,name'])
             ->latest('id')
             ->limit(10)
@@ -63,7 +65,7 @@ class ExamMonitorController extends Controller
             'recentViolations' => $recentViolations,
             'stats' => [
                 ['label' => 'Sesi Berjalan', 'value' => count($ongoing)],
-                ['label' => 'Pelanggaran Hari Ini', 'value' => AuditLog::query()->whereIn('level', ['violation', 'critical'])->where('created_at', '>=', today())->count()],
+                ['label' => 'Catatan Keamanan Hari Ini', 'value' => AuditLog::query()->whereIn('level', ['warning', 'violation', 'critical'])->where('created_at', '>=', today())->count()],
                 ['label' => 'Peringatan Hari Ini', 'value' => AuditLog::query()->where('level', 'warning')->where('created_at', '>=', today())->count()],
             ],
         ]);
